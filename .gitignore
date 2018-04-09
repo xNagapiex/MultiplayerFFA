@@ -3,6 +3,8 @@ MultiplayerFFA/[Tt]emp/
 MultiplayerFFA/[Ll]ibrary/
 MultiplayerFFA/[Oo]bj/
 MultiplayerFFA/[Bb]uild/
+MultiplayerFFA/**/*.sln
+MultiplayerFFA/**/*.csproj
 MultiplayerFFA/[Bb]uilds/
 Server/DarkRift Server/Logs/
 MultiplayerFFA/Assets/AssetStoreTools*
