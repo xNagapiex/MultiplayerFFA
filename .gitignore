@@ -15,7 +15,8 @@ ExportedObj/
 .consulo/
 *.csproj
 *.unityproj
-*.sln
+*.userosscache
+*.sln.docstates
 *.suo
 *.tmp
 *.user
