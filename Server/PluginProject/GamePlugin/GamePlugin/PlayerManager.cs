@@ -39,7 +39,7 @@ public class PlayerManager : Plugin
         const float MAP_WIDTH = 20;
         Random r = new Random();
         Player newPlayer = new Player(
-        
+
         e.Client.ID,
             (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
             (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
@@ -57,7 +57,7 @@ public class PlayerManager : Plugin
                     client.SendMessage(newPlayerMessage, SendMode.Reliable);
             }
         }
-        
+
     }
 
     public PlayerManager(PluginLoadData pluginLoadData) : base(pluginLoadData)
