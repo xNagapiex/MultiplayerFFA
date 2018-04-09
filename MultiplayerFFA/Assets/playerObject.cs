@@ -1,21 +1,27 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+[RequireComponent(typeof(Renderer))]
 
-public class player : MonoBehaviour {
-
-    public float speed;
-
+public class playerObject : MonoBehaviour
+{
+    [SerializeField]
+    public float speed = 1f;
     private Rigidbody2D rb;
 
-	// Use this for initialization
-	void Start ()
+    Vector3 movePosition;
+
+    void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-	}
-	
-	// Update is called once per frame
-	void Update ()
+    }
+
+    void Awake()
+    {
+        movePosition = transform.position;
+    }
+
+    void Update()
     {
         float hAxis = Input.GetAxis("Horizontal");
         float vAxis = Input.GetAxis("Vertical");
@@ -27,5 +33,10 @@ public class player : MonoBehaviour {
         Vector3 mousePosition = Input.mousePosition;
         mousePosition = Camera.main.ScreenToWorldPoint(mousePosition);
         transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(mousePosition.y - transform.position.y, mousePosition.x - transform.position.x) * Mathf.Rad2Deg - 90);
+    }
+
+    internal void SetMovePosition(Vector3 newPosition)
+    {
+        movePosition = newPosition;
     }
 }
