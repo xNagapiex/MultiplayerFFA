@@ -6,7 +6,13 @@ using UnityEngine;
 public class playerObject : MonoBehaviour
 {
     [SerializeField]
-    public float speed = 1f;
+    [Tooltip("The speed that the player will move.")]
+    float speed = 1f;
+
+    [SerializeField]
+    [Tooltip("Multiplier for the scaling of the player.")]
+    float scale = 1f;
+
     private Rigidbody2D rb;
 
     Vector3 movePosition;
@@ -33,6 +39,12 @@ public class playerObject : MonoBehaviour
         Vector3 mousePosition = Input.mousePosition;
         mousePosition = Camera.main.ScreenToWorldPoint(mousePosition);
         transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(mousePosition.y - transform.position.y, mousePosition.x - transform.position.x) * Mathf.Rad2Deg - 90);
+    }
+
+    internal void SetColor(Color32 color)
+    {
+        Renderer renderer = GetComponent<Renderer>();
+        renderer.material.color = color;
     }
 
     internal void SetMovePosition(Vector3 newPosition)

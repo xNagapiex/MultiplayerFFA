@@ -64,9 +64,16 @@ public class PlayerSpawner : MonoBehaviour
 
                 while (reader.Position < reader.Length)
                 {
+                    print(reader.Position);
                     ushort id = reader.ReadUInt16();
                     Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle());
-                    float radius = reader.ReadSingle();
+                    float rotationZ = reader.ReadSingle();
+                    Color32 color = new Color32(
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        255
+                        );
 
                     GameObject obj;
                     if (id == client.ID)
@@ -79,6 +86,13 @@ public class PlayerSpawner : MonoBehaviour
                     {
                         obj = Instantiate(networkPrefab, position, Quaternion.identity) as GameObject;
                     }
+
+                    playerObject playerObject = obj.GetComponent<playerObject>();
+
+                    SpriteRenderer playerSprite = obj.GetComponent<SpriteRenderer>();
+                    playerSprite.color = color;
+
+                    networkPlayerManager.Add(id, playerObject);
                 }
             }
         }
