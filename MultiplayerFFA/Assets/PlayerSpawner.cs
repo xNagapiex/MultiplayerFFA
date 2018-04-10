@@ -56,18 +56,23 @@ public class PlayerSpawner : MonoBehaviour
         {
             if (message.Tag == Tags.SpawnPlayerTag)
             {
-                if (reader.Length % 17 != 0)
+                if (reader.Length % 13 != 0)
                 {
                     Debug.LogWarning("Received malformed spawn packet.");
-                    return;
+
                 }
 
                 while (reader.Position < reader.Length)
                 {
                     print(reader.Position);
                     ushort id = reader.ReadUInt16();
-                    Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle());
-                    float rotationZ = reader.ReadSingle();
+                    Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), 0);
+
+                    if (id == client.ID)
+                    {
+                        position.z = -2;
+                    }
+
                     Color32 color = new Color32(
                         reader.ReadByte(),
                         reader.ReadByte(),
@@ -87,12 +92,14 @@ public class PlayerSpawner : MonoBehaviour
                         obj = Instantiate(networkPrefab, position, Quaternion.identity) as GameObject;
                     }
 
+
                     playerObject playerObject = obj.GetComponent<playerObject>();
-
-                    SpriteRenderer playerSprite = obj.GetComponent<SpriteRenderer>();
-                    playerSprite.color = color;
-
                     networkPlayerManager.Add(id, playerObject);
+
+                    SpriteRenderer playerCarrot = obj.transform.GetChild(0).GetComponent<SpriteRenderer>();
+                    SpriteRenderer playerHatLine = obj.transform.GetChild(1).GetComponent<SpriteRenderer>();
+                    playerCarrot.color = color;
+                    playerHatLine.color = color;
                 }
             }
         }

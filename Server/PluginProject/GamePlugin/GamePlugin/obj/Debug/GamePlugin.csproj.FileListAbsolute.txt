@@ -6,3 +6,11 @@ C:\Users\RonjaKuk\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GameP
 C:\Users\RonjaKuk\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.csproj.CoreCompileInputs.cache
 C:\Users\RonjaKuk\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.dll
 C:\Users\RonjaKuk\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.pdb
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\GamePlugin.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\GamePlugin.pdb
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\DarkRift.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\DarkRift.Server.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.csprojResolveAssemblyReference.cache
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.csproj.CoreCompileInputs.cache
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.pdb

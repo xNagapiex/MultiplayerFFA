@@ -20,17 +20,26 @@ namespace AgarPlugin
 
         public PlayerManager(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
-            ClientManager.ClientConnected += ClientConnected;
+            if (ClientManager.Count < 2)
+            {
+                ClientManager.ClientConnected += ClientConnected;
+            }
         }
 
         void ClientConnected(object sender, ClientConnectedEventArgs e)
         {
+
             Random r = new Random();
             Player newPlayer = new Player(
                 e.Client.ID,
-                (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
-                (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
-                1f,
+                (float)0,
+                (float)0,
+
+                (float)0,
+                (float)0,
+                (float)0,
+                (float)0,
+
                 (byte)r.Next(0, 200),
                 (byte)r.Next(0, 200),
                 (byte)r.Next(0, 200)
@@ -39,10 +48,11 @@ namespace AgarPlugin
             // Announce new player to others
             using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
             {
+
                 newPlayerWriter.Write(newPlayer.ID);
                 newPlayerWriter.Write(newPlayer.X);
                 newPlayerWriter.Write(newPlayer.Y);
-                newPlayerWriter.Write(newPlayer.Z);
+
                 newPlayerWriter.Write(newPlayer.ColorR);
                 newPlayerWriter.Write(newPlayer.ColorG);
                 newPlayerWriter.Write(newPlayer.ColorB);
@@ -55,6 +65,7 @@ namespace AgarPlugin
 
                 // Deal with new player themselves
                 players.Add(e.Client, newPlayer);
+                
 
                 using (DarkRiftWriter playerWriter = DarkRiftWriter.Create())
                 {
@@ -63,7 +74,7 @@ namespace AgarPlugin
                         playerWriter.Write(player.ID);
                         playerWriter.Write(player.X);
                         playerWriter.Write(player.Y);
-                        playerWriter.Write(player.Z);
+
                         playerWriter.Write(player.ColorR);
                         playerWriter.Write(player.ColorG);
                         playerWriter.Write(player.ColorB);
@@ -73,10 +84,12 @@ namespace AgarPlugin
                         e.Client.SendMessage(playerMessage, SendMode.Reliable);
                 }
 
+
                 e.Client.MessageReceived += MovementMessageReceived;
             }
         }
 
+        // Reacting to player moving
         void MovementMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             using (Message message = e.GetMessage() as Message)
@@ -87,20 +100,29 @@ namespace AgarPlugin
                     {
                         float newX = reader.ReadSingle();
                         float newY = reader.ReadSingle();
-                        float newZ = reader.ReadSingle();
+                        float newRX = reader.ReadSingle();
+                        float newRY = reader.ReadSingle();
+                        float newRZ = reader.ReadSingle();
+                        float newRW = reader.ReadSingle();
 
                         Player player = players[e.Client];
 
                         player.X = newX;
                         player.Y = newY;
-                        player.Z = newZ;
+                        player.RX = newRX;
+                        player.RY = newRY;
+                        player.RZ = newRZ;
+                        player.RW = newRW;
 
                         using (DarkRiftWriter writer = DarkRiftWriter.Create())
                         {
                             writer.Write(player.ID);
                             writer.Write(player.X);
                             writer.Write(player.Y);
-                            writer.Write(player.Z);
+                            writer.Write(player.RX);
+                            writer.Write(player.RY);
+                            writer.Write(player.RZ);
+                            writer.Write(player.RW);
                             message.Serialize(writer);
                         }
 
@@ -118,17 +140,28 @@ namespace AgarPlugin
         public ushort ID { get; set; }
         public float X { get; set; }
         public float Y { get; set; }
-        public float Z { get; set; }
+
+        // Details of the current rotation Quaternion
+        public float RX { get; set; }
+        public float RY { get; set; }
+        public float RZ { get; set; }
+        public float RW { get; set; }
+
         public byte ColorR { get; set; }
         public byte ColorG { get; set; }
         public byte ColorB { get; set; }
 
-        public Player(ushort ID, float x, float y, float z, byte colorR, byte colorG, byte colorB)
+        public Player(ushort ID, float x, float y, float rx, float ry, float rz, float rw, byte colorR, byte colorG, byte colorB)
         {
             this.ID = ID;
             this.X = x;
             this.Y = y;
-            this.Z = Z;
+
+            this.RX = rx;
+            this.RY = ry;
+            this.RZ = rz;
+            this.RW = rw;
+
             this.ColorR = colorR;
             this.ColorG = colorG;
             this.ColorB = colorB;

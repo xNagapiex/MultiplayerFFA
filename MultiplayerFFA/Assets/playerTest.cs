@@ -20,6 +20,7 @@ public class playerTest : MonoBehaviour
     public UnityClient Client { get; set; }
 
     Vector3 lastPosition;
+    Vector3 lastMousePosition;
 
     // Use this for initialization
     void Start()
@@ -30,6 +31,9 @@ public class playerTest : MonoBehaviour
     void Awake()
     {
         lastPosition = transform.position;
+        lastMousePosition = Input.mousePosition;
+        lastMousePosition = Camera.main.ScreenToWorldPoint(lastMousePosition);
+
     }
 
     // Update is called once per frame
@@ -46,7 +50,7 @@ public class playerTest : MonoBehaviour
         mousePosition = Camera.main.ScreenToWorldPoint(mousePosition);
         transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(mousePosition.y - transform.position.y, mousePosition.x - transform.position.x) * Mathf.Rad2Deg - 90);
 
-        if (Vector3.Distance(lastPosition, transform.position) > moveDistance)
+        if (Vector3.Distance(lastPosition, transform.position) > moveDistance || Vector3.Distance(mousePosition, lastMousePosition) > moveDistance)
         {
             /* Send position to server here */
 
@@ -55,6 +59,11 @@ public class playerTest : MonoBehaviour
             {
                 writer.Write(transform.position.x);
                 writer.Write(transform.position.y);
+
+                writer.Write(transform.rotation.x);
+                writer.Write(transform.rotation.y);
+                writer.Write(transform.rotation.z);
+                writer.Write(transform.rotation.w);      
 
                 using (Message message = Message.Create(Tags.MovePlayerTag, writer))
                     Client.SendMessage(message, SendMode.Unreliable);

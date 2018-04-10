@@ -191,7 +191,9 @@ namespace DarkRift.Client.Unity
 		{
             //If auto connect is true then connect to the server
             if (autoConnect)
-			    Connect(Address, port, ipVersion);
+            {
+                Connect(Address, port, ipVersion);
+            }
 		}
 
         void Update()
