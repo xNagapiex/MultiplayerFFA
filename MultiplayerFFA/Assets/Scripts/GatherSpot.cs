@@ -26,7 +26,7 @@ public class GatherSpot : MonoBehaviour {
         {
             print("In interaction range of " + gameObject.name);
 
-            if (Input.GetKeyDown(KeyCode.E) && isAvailable)
+            if (Input.GetMouseButton(0) && isAvailable)
             {
                 print("Got " + gameObject.name + "!");
                 GetComponent<SpriteRenderer>().sprite = harvestedSprite;

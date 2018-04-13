@@ -17,7 +17,7 @@ public class Menu : MonoBehaviour {
 
     public void PlayButton()
     {
-        SceneManager.LoadScene("TestR");
+        SceneManager.LoadScene("NetworkTest");
     }
 
     public void QuitButton()

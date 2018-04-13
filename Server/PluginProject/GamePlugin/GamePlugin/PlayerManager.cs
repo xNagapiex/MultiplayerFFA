@@ -12,40 +12,38 @@ namespace AgarPlugin
     {
         Dictionary<IClient, Player> players = new Dictionary<IClient, Player>();
 
-        const float MAP_WIDTH = 20;
+        const float MAP_WIDTH = 10;
 
+        // Multithreading set to false
         public override bool ThreadSafe => false;
 
-        public override Version Version => new Version(1, 0, 0);
+        // Version number
+        public override Version Version => new Version(1, 3, 1);
 
         public PlayerManager(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
-            if (ClientManager.Count < 2)
-            {
                 ClientManager.ClientConnected += ClientConnected;
-            }
+                ClientManager.ClientDisconnected += ClientDisconnected;
         }
 
+        // What happens when a new client connects
         void ClientConnected(object sender, ClientConnectedEventArgs e)
         {
-
             Random r = new Random();
             Player newPlayer = new Player(
                 e.Client.ID,
-                (float)0,
-                (float)0,
+                (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
+                (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
 
                 (float)0,
                 (float)0,
-                (float)0,
-                (float)0,
 
-                (byte)r.Next(0, 200),
-                (byte)r.Next(0, 200),
-                (byte)r.Next(0, 200)
+                (byte)r.Next(55, 255),
+                (byte)r.Next(55, 255),
+                (byte)r.Next(55, 255)
             );
 
-            // Announce new player to others
+            // Announce new player and their relevant stats to other clients (id, position and color)
             using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
             {
 
@@ -62,31 +60,30 @@ namespace AgarPlugin
                     foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
                         client.SendMessage(newPlayerMessage, SendMode.Reliable);
                 }
+            }
 
-                // Deal with new player themselves
-                players.Add(e.Client, newPlayer);
-                
+            // Add new player to the dictionary so that we can keep track of them
+            players.Add(e.Client, newPlayer);
 
-                using (DarkRiftWriter playerWriter = DarkRiftWriter.Create())
+            // Send the new player their own info (id, position, color)
+            using (DarkRiftWriter playerWriter = DarkRiftWriter.Create())
+            {
+                foreach (Player player in players.Values)
                 {
-                    foreach (Player player in players.Values)
-                    {
-                        playerWriter.Write(player.ID);
-                        playerWriter.Write(player.X);
-                        playerWriter.Write(player.Y);
+                    playerWriter.Write(player.ID);
+                    playerWriter.Write(player.X);
+                    playerWriter.Write(player.Y);
 
-                        playerWriter.Write(player.ColorR);
-                        playerWriter.Write(player.ColorG);
-                        playerWriter.Write(player.ColorB);
-                    }
-
-                    using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
-                        e.Client.SendMessage(playerMessage, SendMode.Reliable);
+                    playerWriter.Write(player.ColorR);
+                    playerWriter.Write(player.ColorG);
+                    playerWriter.Write(player.ColorB);
                 }
 
-
-                e.Client.MessageReceived += MovementMessageReceived;
+                using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                    e.Client.SendMessage(playerMessage, SendMode.Reliable);
             }
+
+            e.Client.MessageReceived += MovementMessageReceived;
         }
 
         // Reacting to player moving
@@ -96,33 +93,29 @@ namespace AgarPlugin
             {
                 if (message.Tag == Tags.MovePlayerTag)
                 {
+                    // Read player's inputs (movement, mouse position)
                     using (DarkRiftReader reader = message.GetReader())
                     {
                         float newX = reader.ReadSingle();
                         float newY = reader.ReadSingle();
-                        float newRX = reader.ReadSingle();
-                        float newRY = reader.ReadSingle();
-                        float newRZ = reader.ReadSingle();
-                        float newRW = reader.ReadSingle();
+                        float newMX = reader.ReadSingle();
+                        float newMY = reader.ReadSingle();
 
                         Player player = players[e.Client];
 
                         player.X = newX;
                         player.Y = newY;
-                        player.RX = newRX;
-                        player.RY = newRY;
-                        player.RZ = newRZ;
-                        player.RW = newRW;
+                        player.MX = newMX;
+                        player.MY = newMY;
 
+                        // Send player's inputs to other clients
                         using (DarkRiftWriter writer = DarkRiftWriter.Create())
                         {
                             writer.Write(player.ID);
                             writer.Write(player.X);
                             writer.Write(player.Y);
-                            writer.Write(player.RX);
-                            writer.Write(player.RY);
-                            writer.Write(player.RZ);
-                            writer.Write(player.RW);
+                            writer.Write(player.MX);
+                            writer.Write(player.MY);
                             message.Serialize(writer);
                         }
 
@@ -132,35 +125,49 @@ namespace AgarPlugin
                 }
             }
         }
-    }
 
+        // Send a despawn message to remaining clients after removing a disconnected player
+        void ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        {
+            players.Remove(e.Client);
+
+            using (DarkRiftWriter writer = DarkRiftWriter.Create())
+            {
+                writer.Write(e.Client.ID);
+
+                using (Message message = Message.Create(Tags.DespawnPlayerTag, writer))
+                {
+                    foreach (IClient client in ClientManager.GetAllClients())
+                        client.SendMessage(message, SendMode.Reliable);
+                }
+            }
+        }
+    }
 
     class Player
     {
         public ushort ID { get; set; }
+
         public float X { get; set; }
         public float Y { get; set; }
 
-        // Details of the current rotation Quaternion
-        public float RX { get; set; }
-        public float RY { get; set; }
-        public float RZ { get; set; }
-        public float RW { get; set; }
+        // Mouse position
+        public float MX { get; set; }
+        public float MY { get; set; }
 
         public byte ColorR { get; set; }
         public byte ColorG { get; set; }
         public byte ColorB { get; set; }
 
-        public Player(ushort ID, float x, float y, float rx, float ry, float rz, float rw, byte colorR, byte colorG, byte colorB)
+        public Player(ushort ID, float x, float y, float mx, float my, byte colorR, byte colorG, byte colorB)
         {
             this.ID = ID;
+
             this.X = x;
             this.Y = y;
 
-            this.RX = rx;
-            this.RY = ry;
-            this.RZ = rz;
-            this.RW = rw;
+            this.MX = mx;
+            this.MY = my;
 
             this.ColorR = colorR;
             this.ColorG = colorG;
