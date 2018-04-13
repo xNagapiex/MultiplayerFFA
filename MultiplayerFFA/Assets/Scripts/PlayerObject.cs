@@ -32,6 +32,9 @@ public class PlayerObject : MonoBehaviour
 
     void Update()
     {
+        Quaternion targetRot;
+        targetRot = Quaternion.Euler(0, 0, Mathf.Atan2(mousePosition.y - transform.position.y, mousePosition.x - transform.position.x) * Mathf.Rad2Deg - 90);
+
         if (!network)
         {
             rb.MovePosition(transform.position + movement);
@@ -39,12 +42,11 @@ public class PlayerObject : MonoBehaviour
 
         else
         {
-            transform.position = Vector3.Lerp(transform.position, targetPos, 0.4f);
+            transform.position = Vector3.Lerp(transform.position, targetPos, Mathf.SmoothStep(0.0f, 1.0f, 0.1f));
+            transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Mathf.SmoothStep(0.0f, 1.0f, 0.1f));
         }
 
-        Quaternion targetRot;
-        targetRot = Quaternion.Euler(0, 0, Mathf.Atan2(mousePosition.y - transform.position.y, mousePosition.x - transform.position.x) * Mathf.Rad2Deg - 90);
-        transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.time * 1);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.time * 2);
     }
 
     // Receiving the player color and applying it to hat and carrot

@@ -120,7 +120,7 @@ namespace AgarPlugin
                         }
 
                         foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
-                            c.SendMessage(message, e.SendMode);
+                            c.SendMessage(message, SendMode.Reliable);
                     }
                 }
             }

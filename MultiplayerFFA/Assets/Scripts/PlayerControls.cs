@@ -14,15 +14,9 @@ public class PlayerControls : MonoBehaviour
     public PlayerNetworking playerNetworking;
     public float speed; // Change to private eventually
 
-    Vector3 lastPosition;
-    Vector3 lastMousePosition;
-
     // Initiating variables
     void Awake()
     {
-        lastPosition = transform.position;
-        lastMousePosition = Input.mousePosition;
-        lastMousePosition = Camera.main.ScreenToWorldPoint(lastMousePosition);
     }
 
     // Gathering player input and sending it forward to the PlayerObject of this object which turns it into action
