@@ -37,7 +37,12 @@ public class PlayerObject : MonoBehaviour
 
         if (!network)
         {
-            rb.MovePosition(transform.position + movement);
+            if (Vector3.Distance(transform.position, mousePosition) > 8.2f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, new Vector3(mousePosition.x, mousePosition.y, transform.position.z), Time.deltaTime * 4.5f);
+            }
+
+            transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.time * 2);
         }
 
         else
@@ -45,8 +50,6 @@ public class PlayerObject : MonoBehaviour
             transform.position = Vector3.Lerp(transform.position, targetPos, Mathf.SmoothStep(0.0f, 1.0f, 0.1f));
             transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Mathf.SmoothStep(0.0f, 1.0f, 0.1f));
         }
-
-        transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.time * 2);
     }
 
     // Receiving the player color and applying it to hat and carrot
@@ -56,12 +59,6 @@ public class PlayerObject : MonoBehaviour
         SpriteRenderer playerHatLine = transform.GetChild(1).GetComponent<SpriteRenderer>();
         playerCarrot.color = color;
         playerHatLine.color = color;
-    }
-
-    // Receive the movement info and apply it in update
-    internal void SetMovement(Vector3 newMovement)
-    {
-        movement = newMovement;
     }
 
     // Receive mousePos info and use it to rotate the player in udpate

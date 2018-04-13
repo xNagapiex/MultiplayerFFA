@@ -22,13 +22,6 @@ public class PlayerControls : MonoBehaviour
     // Gathering player input and sending it forward to the PlayerObject of this object which turns it into action
     void Update()
     {
-        float hAxis = Input.GetAxis("Horizontal");
-        float vAxis = Input.GetAxis("Vertical");
-
-        Vector3 movement = new Vector3(hAxis, vAxis, 0) * speed * Time.deltaTime;
-
-        playerObject.SetMovement(movement);
-
         Vector3 mousePosition = Input.mousePosition;
         mousePosition = Camera.main.ScreenToWorldPoint(mousePosition);
 
