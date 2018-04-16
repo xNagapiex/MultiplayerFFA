@@ -4,14 +4,20 @@ using UnityEngine;
 
 public class GatherSpot : MonoBehaviour {
 
-    public int ID;
+    [SerializeField]
+    int ID;
+    [SerializeField]
+    int itemID;
+
     bool isAvailable = true;
     public Sprite normalSprite;
     public Sprite harvestedSprite;
+    GameObject network;
 
 	// Use this for initialization
 	void Start ()
     {
+        network = GameObject.Find("Network");
 	}
 	
 	// Update is called once per frame
@@ -30,6 +36,10 @@ public class GatherSpot : MonoBehaviour {
             {
                 print("Got " + gameObject.name + "!");
                 GetComponent<SpriteRenderer>().sprite = harvestedSprite;
+
+                // Will be important later
+                //network.GetComponent<GatheringCrafting>().ItemGathered(ID);
+
                 isAvailable = false;
             }
 
@@ -43,5 +53,16 @@ public class GatherSpot : MonoBehaviour {
                 GetComponent<SpriteRenderer>().sortingLayerName = "EnvironmentPlayerInFront";
             }
         }
+    }
+
+    public int GetID()
+    {
+        return ID;
+    }
+
+    public void disableSpot()
+    {
+        GetComponent<SpriteRenderer>().sprite = harvestedSprite;
+        isAvailable = false;
     }
 }
