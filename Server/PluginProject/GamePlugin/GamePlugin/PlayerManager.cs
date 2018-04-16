@@ -83,7 +83,25 @@ namespace AgarPlugin
                     e.Client.SendMessage(playerMessage, SendMode.Reliable);
             }
 
-            e.Client.MessageReceived += MovementMessageReceived;
+            // If a message is received from a connected client, send it to CheckMessageTag to be handled
+            e.Client.MessageReceived += CheckMessageTag;
+        }
+
+        void CheckMessageTag(object sender, MessageReceivedEventArgs e)
+        {
+            using (Message message = e.GetMessage() as Message)
+            {
+                if (message.Tag == Tags.MovePlayerTag)
+                {
+                    MovementMessageReceived(sender, e);
+                }
+
+                // Work in Progress, has to do with item gathering
+                //else if (message.Tag == Tags.GatherItemTag)
+                //{
+                //    GatherMessageReceived(sender, e);
+                //}
+            }
         }
 
         // Reacting to player moving
@@ -91,8 +109,6 @@ namespace AgarPlugin
         {
             using (Message message = e.GetMessage() as Message)
             {
-                if (message.Tag == Tags.MovePlayerTag)
-                {
                     // Read player's inputs (movement, mouse position)
                     using (DarkRiftReader reader = message.GetReader())
                     {
@@ -121,10 +137,34 @@ namespace AgarPlugin
 
                         foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
                             c.SendMessage(message, SendMode.Reliable);
-                    }
-                }
+                    }                
             }
         }
+
+        // Attempting to gather an item
+        //void GatherMessageReceived(object sender, MessageReceivedEventArgs e)
+        //{
+        //    using (Message message = e.GetMessage() as Message)
+        //    {
+        //        // Read player's inputs (movement, mouse position)
+        //        using (DarkRiftReader reader = message.GetReader())
+        //        {
+        //            float spotID = reader.ReadSingle();
+
+        //            Console.WriteLine("Gather spot " + spotID + " gathered!");
+
+        //            // Send player's inputs to other clients
+        //            using (DarkRiftWriter writer = DarkRiftWriter.Create())
+        //            {
+        //                writer.Write(spotID);
+        //                message.Serialize(writer);
+        //            }
+
+        //            foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
+        //                c.SendMessage(message, SendMode.Reliable);
+        //        }
+        //    }
+        //}
 
         // Send a despawn message to remaining clients after removing a disconnected player
         void ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
