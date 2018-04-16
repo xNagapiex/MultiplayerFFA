@@ -32,6 +32,16 @@ public class GatherSpot : MonoBehaviour {
                 GetComponent<SpriteRenderer>().sprite = harvestedSprite;
                 isAvailable = false;
             }
+
+            if (collision.gameObject.transform.position.y > transform.position.y)
+            {
+                GetComponent<SpriteRenderer>().sortingLayerName = "EnvironmentPlayerBehind";
+            }
+
+            else
+            {
+                GetComponent<SpriteRenderer>().sortingLayerName = "EnvironmentPlayerInFront";
+            }
         }
     }
 }
