@@ -19,55 +19,85 @@ public class ItemManager : MonoBehaviour
     [Tooltip("The herb prefab.")]
     public GameObject herb;
 
+    Dictionary<int, GatherSpot> gatherSpots = new Dictionary<int, GatherSpot>();
 
     void Awake()
     {
-        client.MessageReceived += SpawnGatherSpots;
+        client.MessageReceived += HandleMessage;
     }
 
-    // Update is called once per frame
-    void Update ()
-    {
-    }
-
-    public void SpawnGatherSpots(object sender, MessageReceivedEventArgs e)
+    void HandleMessage(object sender, MessageReceivedEventArgs e)
     {
         using (Message message = e.GetMessage())
         {
-            if(message.Tag == Tags.GatherSpotsTag)
+            if (message.Tag == Tags.GatherSpotsTag)
             {
-                using (DarkRiftReader reader = message.GetReader())
+                SpawnGatherSpots(sender, e);
+            }
+
+            else if (message.Tag == Tags.GatherItemTag)
+            {
+                UpdateGatherSpots(sender, e);
+            }
+        }
+    }
+
+    // Disable taken gather spots
+    void UpdateGatherSpots(object sender, MessageReceivedEventArgs e)
+    {
+        using (Message message = e.GetMessage() as Message)
+        {
+            // Read ID of gathered gather spot and disable the gather spot corresponding to the ID
+            using (DarkRiftReader reader = message.GetReader())
+            {
+                int spotID = reader.ReadUInt16();
+
+                gatherSpots[spotID].DisableGatherSpot();
+
+            }
+        }
+    }
+
+    void SpawnGatherSpots(object sender, MessageReceivedEventArgs e)
+    {
+        using (Message message = e.GetMessage())
+        {
+            using (DarkRiftReader reader = message.GetReader())
+            {
+                int count = 0;
+
+                while (reader.Position < reader.Length)
                 {
-                    int count = 0;
+                    count++;
+                    ushort spotID = reader.ReadUInt16();
+                    ushort itemID = reader.ReadUInt16();
+                    Vector3 pos = new Vector3(reader.ReadInt16(), reader.ReadInt16(), 1);
 
-                    while (reader.Position < reader.Length)
+                    print("SpotID: " + spotID);
+                    print("ItemID: " + itemID);
+                    print("X: " + pos.x);
+                    print("Y: " + pos.y);
+
+                    if (itemID == 0)
                     {
-                        count++;
-                        ushort spotID = reader.ReadUInt16();
-                        ushort itemID = reader.ReadUInt16();
-                        Vector3 pos = new Vector3 (reader.ReadInt16(), reader.ReadInt16(), 1);
+                        GameObject temp = Instantiate(herb, pos, Quaternion.identity);
+                        GatherSpot gatherScript = temp.GetComponent<GatherSpot>();
+                        gatherScript.SetID(spotID);
+                        gatherScript.SetItemManager(this);
+                        gatherSpots.Add(spotID, gatherScript);
+                    }
 
-                        print("SpotID: " + spotID);
-                        print("ItemID: " + itemID);
-                        print("X: " + pos.x);
-                        print("Y: " + pos.y);
-
-                        if (itemID == 0)
-                        {
-                            GameObject temp = GameObject.Instantiate(herb, pos, Quaternion.identity);
-                            temp.GetComponent<GatherSpot>().SetID(spotID);
-                            temp.GetComponent<GatherSpot>().SetItemManager(this);
-                        }
-
-                        else if (itemID == 1)
-                        {
-                            GameObject temp = GameObject.Instantiate(tree, pos, Quaternion.identity);
-                            temp.GetComponent<GatherSpot>().SetID(spotID);
-                            temp.GetComponent<GatherSpot>().SetItemManager(this);
-                        }
+                    else if (itemID == 1)
+                    {
+                        GameObject temp = Instantiate(tree, pos, Quaternion.identity);
+                        GatherSpot gatherScript = temp.GetComponent<GatherSpot>();
+                        gatherScript.SetID(spotID);
+                        gatherScript.SetItemManager(this);
+                        gatherSpots.Add(spotID, gatherScript);
                     }
                 }
             }
+
         }
     }
 
@@ -76,7 +106,7 @@ public class ItemManager : MonoBehaviour
         // Sending gathering attempt to server
         using (DarkRiftWriter writer = DarkRiftWriter.Create())
         {
-            writer.Write(ID);
+            writer.Write((ushort)ID);
 
             using (Message message = Message.Create(Tags.GatherItemTag, writer))
                 client.SendMessage(message, SendMode.Reliable);

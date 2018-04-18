@@ -4,10 +4,8 @@ using UnityEngine;
 
 public class GatherSpot : MonoBehaviour {
 
-    int ID;
-
     [SerializeField]
-    int ItemID;
+    int ID;
 
     public Sprite normalSprite;
     public Sprite harvestedSprite;
@@ -52,11 +50,6 @@ public class GatherSpot : MonoBehaviour {
     public void SetID(int newID)
     {
         ID = newID;
-    }
-
-    public int GetItemID()
-    {
-        return ItemID;
     }
 
     public void SetItemManager(ItemManager it)

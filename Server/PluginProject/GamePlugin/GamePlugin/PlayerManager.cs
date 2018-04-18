@@ -137,10 +137,10 @@ namespace GamePlugin
                 }
 
                 // Work in Progress, has to do with item gathering
-                //else if (message.Tag == Tags.GatherItemTag)
-                //{
-                //    GatherMessageReceived(sender, e);
-                //}
+                else if (message.Tag == Tags.GatherItemTag)
+                {
+                    GatherMessageReceived(sender, e);
+                }
             }
         }
 
@@ -181,13 +181,69 @@ namespace GamePlugin
             }
         }
 
-        // Writing gather spots received from host to DB
+        // Reacting to player picking up an item
+        void GatherMessageReceived(object sender, MessageReceivedEventArgs e)
+        {
+            using (Message message = e.GetMessage() as Message)
+            {
+                // Read player's inputs (movement, mouse position)
+                using (DarkRiftReader reader = message.GetReader())
+                {
+                    int spotID = reader.ReadUInt16();
+                    Console.WriteLine("SpotID: " + spotID);
+                    float spotIDf = spotID;
+
+                    string availabilityQuery = "SELECT IsAvailable FROM GatherSpots WHERE ID = (@SpotID)";
+                    SQLiteCommand availabilityCommand = new SQLiteCommand(availabilityQuery, DB.myConnection);
+                    DB.OpenConnection();
+                    availabilityCommand.Parameters.AddWithValue("@SpotID", spotID);
+                    string isAvailableresult = availabilityCommand.ExecuteScalar().ToString();
+                    int isAvailable = 0;
+                    DB.CloseConnection();
+
+                    isAvailable = Convert.ToInt32(isAvailableresult);
+                       Console.WriteLine(isAvailable);
+
+
+                    if (isAvailable == 1)
+                    {
+                        Console.WriteLine("Attempt to gather " + spotID + " approved");
+
+                        DB.OpenConnection();
+                        string query = "UPDATE GatherSpots SET isAvailable = 0 WHERE ID = (@SpotID)";
+                        SQLiteCommand disableCommand = new SQLiteCommand(query, DB.myConnection);
+                        disableCommand.Parameters.AddWithValue("@SpotID", spotID);
+                        int result = disableCommand.ExecuteNonQuery();
+                        DB.CloseConnection();
+
+                        // Show everyone which gather spot was taken
+                        using (DarkRiftWriter writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(spotID);
+                        }
+
+                        foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
+                            c.SendMessage(message, SendMode.Reliable);
+                    }
+
+                    else
+                    {
+                        Console.WriteLine("Gather attempt failed");
+                    }
+
+                }
+            }
+        }
+
+        // Writing gather spots received from host to DB - Taru Konttinen 18.4.2018
         void SpawnGatherSpots(IClient client)
         {
+            // If gather spots haven't been spawned/map hasn't been generated, generate it now and send it to all players
             if (!gatherSpotsSpawned)
             {
                 using (DarkRiftWriter writer = DarkRiftWriter.Create())
                 {
+                    // Deleting old data in case it hasn't already been deleted
                     DB.OpenConnection();
                     string query = "DELETE FROM GatherSpots";
                     SQLiteCommand wipeCommand = new SQLiteCommand(query, DB.myConnection);
@@ -209,6 +265,9 @@ namespace GamePlugin
 
                     Random r = new Random();
 
+                    // I know I want the distance between gather spots to be 4, so I've made the 40x40 into a 10x10 grid
+                    // This for fills the grid from bottom right to upper left, filling rows (x) and moving up a column (y) every time the x of 18 has been reached
+                    // The data of the gather spots is written to the DB in the progress and sent to the client. Spots that end up being empty aren't reported.
                     for (int i = 0; i < 100; i++)
                     {
                         int randomItem = r.Next(3);
@@ -299,30 +358,32 @@ namespace GamePlugin
                 Console.WriteLine("Finished writing gather spots to DB.");
                     }
 
+
+            // In case someone joins late, don't generate the map again, just tell them where things are. (isAvailable not included because people aren't supposed to join after the beginning)
             else
             {
                         using (DarkRiftWriter writer = DarkRiftWriter.Create())
                         {
 
-                            string query = "SELECT ID, IsAvailable, ItemID, PosX, PosY FROM GatherSpots";
+                            string query = "SELECT cast(ID as float), cast(IsAvailable as float), cast(ItemID as float), cast(PosX as float), cast(PosY as float) FROM GatherSpots";
                             SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
                             DB.OpenConnection();
                             SQLiteDataReader result = myCommand.ExecuteReader();
 
-                            if (result.HasRows)
-                            {
-                                while (result.Read())
-                                {
-                                    ushort ID = (ushort)result["ID"];
-                                    ushort ItemID = (ushort)result["ItemID"];
-                                    ushort PosX = (ushort)result["PosX"];
-                                    ushort PosY = (ushort)result["PosY"];
+                        //    if (result.HasRows)
+                        //    {
+                        //        while (result.Read())
+                        //        {
+                        //    float ID = (float)result["ID"];
+                        //    float ItemID = (float)result["ItemID"];
+                        //    float PosX = (float)result["PosX"];
+                        //    float PosY = (float)result["PosY"];
 
-                                    writer.Write(ID);
-                                    writer.Write(ItemID);
-                                    writer.Write(PosX);
-                                    writer.Write(PosY);
-                                }
+                        //    writer.Write(ID);
+                        //    writer.Write(ItemID);
+                        //    writer.Write(PosX);
+                        //    writer.Write(PosY);
+                        //}
 
                                 using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
                                 {
@@ -354,6 +415,12 @@ namespace GamePlugin
 
             if(players.Count == 0)
             {
+                // Deleting old data when all players have left
+                DB.OpenConnection();
+                string query = "DELETE FROM GatherSpots";
+                SQLiteCommand wipeCommand = new SQLiteCommand(query, DB.myConnection);
+                int result = wipeCommand.ExecuteNonQuery();
+                DB.CloseConnection();
                 gatherSpotsSpawned = false;
             }
         }
