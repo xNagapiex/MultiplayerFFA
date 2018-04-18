@@ -14,3 +14,12 @@ C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlug
 C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.csproj.CoreCompileInputs.cache
 C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.dll
 C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\obj\Debug\GamePlugin.pdb
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\GamePlugin.dll.config
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\EntityFramework.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\EntityFramework.SqlServer.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\System.Data.SQLite.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\System.Data.SQLite.Linq.dll
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\EntityFramework.xml
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\EntityFramework.SqlServer.xml
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\System.Data.SQLite.xml
+C:\Users\Rekku\Documents\MultiplayerFFA\Server\PluginProject\GamePlugin\GamePlugin\bin\Debug\System.Data.SQLite.dll.config

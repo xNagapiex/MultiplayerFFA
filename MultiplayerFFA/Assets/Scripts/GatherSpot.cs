@@ -4,20 +4,18 @@ using UnityEngine;
 
 public class GatherSpot : MonoBehaviour {
 
-    [SerializeField]
     int ID;
-    [SerializeField]
-    int itemID;
 
-    bool isAvailable = true;
+    [SerializeField]
+    int ItemID;
+
     public Sprite normalSprite;
     public Sprite harvestedSprite;
-    GameObject network;
+    ItemManager itemManager;
 
 	// Use this for initialization
 	void Start ()
     {
-        network = GameObject.Find("Network");
 	}
 	
 	// Update is called once per frame
@@ -30,19 +28,15 @@ public class GatherSpot : MonoBehaviour {
     {
         if (collision.gameObject.tag == "Player")
         {
-            print("In interaction range of " + gameObject.name);
 
-            if (Input.GetMouseButton(0) && isAvailable)
+            if (Input.GetMouseButton(0) && GetComponent<SpriteRenderer>().sprite != harvestedSprite)
             {
-                print("Got " + gameObject.name + "!");
                 GetComponent<SpriteRenderer>().sprite = harvestedSprite;
 
-                // Will be important later
-                //network.GetComponent<GatheringCrafting>().ItemGathered(ID);
-
-                isAvailable = false;
+                itemManager.ItemGathered(ID);
             }
 
+            // Making the sprite appear behind or in front of player depending on where the player is compared to the item on the Y-axel
             if (collision.gameObject.transform.position.y > transform.position.y)
             {
                 GetComponent<SpriteRenderer>().sortingLayerName = "EnvironmentPlayerBehind";
@@ -55,14 +49,23 @@ public class GatherSpot : MonoBehaviour {
         }
     }
 
-    public int GetID()
+    public void SetID(int newID)
     {
-        return ID;
+        ID = newID;
     }
 
-    public void disableSpot()
+    public int GetItemID()
+    {
+        return ItemID;
+    }
+
+    public void SetItemManager(ItemManager it)
+    {
+        itemManager = it;
+    }
+
+    public void DisableGatherSpot()
     {
         GetComponent<SpriteRenderer>().sprite = harvestedSprite;
-        isAvailable = false;
     }
 }

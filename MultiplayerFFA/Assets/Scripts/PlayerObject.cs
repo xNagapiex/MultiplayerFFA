@@ -7,18 +7,14 @@ using UnityEngine;
 
 public class PlayerObject : MonoBehaviour
 {    
-    private Rigidbody2D rb;
     Vector3 mousePosition;
-    Vector3 movement;
     Vector3 targetPos;
     bool network;
 
     // Initiating some variables
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
         mousePosition = Vector3.down;
-        movement = Vector3.zero;
 
         if (GetComponent<PlayerControls>())
         {
@@ -40,6 +36,26 @@ public class PlayerObject : MonoBehaviour
             if (Vector3.Distance(transform.position, mousePosition) > 8.2f)
             {
                 transform.position = Vector3.MoveTowards(transform.position, new Vector3(mousePosition.x, mousePosition.y, transform.position.z), Time.deltaTime * 4.5f);
+
+                if (transform.position.x >= 20)
+                {
+                    transform.position = new Vector3(20, transform.position.y, transform.position.z);
+                }
+
+                if (transform.position.x <= -20)
+                {
+                    transform.position = new Vector3(-20, transform.position.y, transform.position.z);
+                }
+
+                if (transform.position.y >= 20)
+                {
+                    transform.position = new Vector3(transform.position.x, 20, transform.position.z);
+                }
+
+                if (transform.position.y <= -20)
+                {
+                    transform.position = new Vector3(transform.position.x, -20, transform.position.z);
+                }
             }
 
             transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.time * 2);

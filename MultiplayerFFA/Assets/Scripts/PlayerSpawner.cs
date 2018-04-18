@@ -66,68 +66,70 @@ public class PlayerSpawner : MonoBehaviour
     void SpawnPlayer(object sender, MessageReceivedEventArgs e)
     {
         using (Message message = e.GetMessage())
-        using (DarkRiftReader reader = message.GetReader())
         {
-            /* Commented out because our spawn packet length still varies at this point given that 
-              we haven't figured out what we want from it yet */
-
-            //if (reader.Length % 13 != 0)
-            //{
-            //    Debug.LogWarning("Received malformed spawn packet.");
-            //    return;
-            //}
-
-            // Reading the spawn packet
-            while (reader.Position < reader.Length)
+            using (DarkRiftReader reader = message.GetReader())
             {
-                print(reader.Position);
-                // Reading ID and position
-                ushort id = reader.ReadUInt16();
-                Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), 0);
+                /* Commented out because our spawn packet length still varies at this point given that 
+                  we haven't figured out what we want from it yet */
 
-                /* This is an additional step taken to make sure that the controllable sprite renders 
-                 on top of network player ones. Not essential, just a cosmetic thing. */
-                if (id == client.ID)
+                //if (reader.Length % 13 != 0)
+                //{
+                //    Debug.LogWarning("Received malformed spawn packet.");
+                //    return;
+                //}
+
+                // Reading the spawn packet
+                while (reader.Position < reader.Length)
                 {
-                    position.z = -2;
+                    print(reader.Position);
+                    // Reading ID and position
+                    ushort id = reader.ReadUInt16();
+                    Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), 0);
+
+                    /* This is an additional step taken to make sure that the controllable sprite renders 
+                     on top of network player ones. Not essential, just a cosmetic thing. */
+                    if (id == client.ID)
+                    {
+                        position.z = -2;
+                    }
+
+                    // Reading player color
+                    Color32 color = new Color32(
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        255
+                        );
+
+
+                    GameObject obj;
+
+                    // If the spawned player is the controllable player, spawn them as the controllable prefab
+                    if (id == client.ID)
+                    {
+                        obj = Instantiate(controllablePrefab, position, Quaternion.identity) as GameObject;
+
+                        // Tell the player's networking script where the client script is
+                        PlayerNetworking playerNetworking = obj.GetComponent<PlayerNetworking>();
+                        playerNetworking.Client = client;
+
+                        // Command camera to follow player
+                        camera.SetCameraTarget(obj.transform);
+                    }
+
+                    // Otherwise, spawn a network player
+                    else
+                    {
+                        obj = Instantiate(networkPrefab, position, Quaternion.identity) as GameObject;
+                    }
+
+                    // Tell PlayerObject to set the sprite color to whatever it should be
+                    PlayerObject playerObj = obj.GetComponent<PlayerObject>();
+                    playerObj.SetColor(color);
+
+                    // Add spawned player to players that networkPlayerManager has to track
+                    networkPlayerManager.Add(id, playerObj);
                 }
-
-                // Reading player color
-                Color32 color = new Color32(
-                    reader.ReadByte(),
-                    reader.ReadByte(),
-                    reader.ReadByte(),
-                    255
-                    );
-
-
-                GameObject obj;
-
-                // If the spawned player is the controllable player, spawn them as the controllable prefab
-                if (id == client.ID)
-                {
-                    obj = Instantiate(controllablePrefab, position, Quaternion.identity) as GameObject;
-
-                    // Tell the player's networking script where the client script is
-                    PlayerNetworking playerNetworking = obj.GetComponent<PlayerNetworking>();
-                    playerNetworking.Client = client;
-
-                    // Command camera to follow player
-                    camera.SetCameraTarget(obj.transform);
-                }
-
-                // Otherwise, spawn a network player
-                else
-                {
-                    obj = Instantiate(networkPrefab, position, Quaternion.identity) as GameObject;
-                }
-
-                // Tell PlayerObject to set the sprite color to whatever it should be
-                PlayerObject playerObj = obj.GetComponent<PlayerObject>();
-                playerObj.SetColor(color);
-
-                // Add spawned player to players that networkPlayerManager has to track
-                networkPlayerManager.Add(id, playerObj);
             }
         }
     }
