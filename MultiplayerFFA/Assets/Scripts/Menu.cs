@@ -17,11 +17,16 @@ public class Menu : MonoBehaviour {
 
     public void PlayButton()
     {
-        SceneManager.LoadScene("NetworkTest");
+        SceneManager.LoadScene("Lobby");
     }
 
     public void QuitButton()
     {
         Application.Quit();
+    }
+
+    public void ToLobby()
+    {
+        SceneManager.LoadScene("NetworkTest");
     }
 }

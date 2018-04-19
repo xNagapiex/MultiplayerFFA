@@ -28,6 +28,8 @@ public class PlayerSpawner : MonoBehaviour
     [Tooltip("The main camera.")]
     CameraFollow camera;
 
+    LobbyManager lobbyManager;
+
     void Awake()
     {
         if (client == null)
@@ -48,6 +50,9 @@ public class PlayerSpawner : MonoBehaviour
             Application.Quit();
         }
 
+        //MOVE TO START IF IT DOESN'T WORK HERE!!
+        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
     }
@@ -60,6 +65,34 @@ public class PlayerSpawner : MonoBehaviour
                 SpawnPlayer(sender, e);
             else if (message.Tag == Tags.DespawnPlayerTag)
                 DespawnPlayer(sender, e);
+            else if (message.Tag == Tags.PlayerJoinedTag){
+                PlayerJoined(sender, e);
+            }
+        }
+    }
+
+    void PlayerJoined(object sender, MessageReceivedEventArgs e)
+    {
+        using (Message message = e.GetMessage())
+        {
+            using (DarkRiftReader reader = message.GetReader())
+            {
+                while (reader.Position < reader.Length)
+                {
+                    ushort id = reader.ReadUInt16();
+                    ushort playerCount = reader.ReadUInt16();
+
+                    Color32 color = new Color32(
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        reader.ReadByte(),
+                        255
+                        );
+
+                    lobbyManager.NewPlayerJoined(color, playerCount);
+                }
+                
+            }
         }
     }
 

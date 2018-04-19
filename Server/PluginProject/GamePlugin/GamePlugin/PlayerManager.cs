@@ -86,16 +86,14 @@ namespace GamePlugin
             // Announce new player and their relevant stats to other clients (id, position and color)
             using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
             {
-
+                newPlayerWriter.Write(players.Count);
                 newPlayerWriter.Write(newPlayer.ID);
-                newPlayerWriter.Write(newPlayer.X);
-                newPlayerWriter.Write(newPlayer.Y);
 
                 newPlayerWriter.Write(newPlayer.ColorR);
                 newPlayerWriter.Write(newPlayer.ColorG);
                 newPlayerWriter.Write(newPlayer.ColorB);
 
-                using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, newPlayerWriter))
+                using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
                 {
                     foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
                         client.SendMessage(newPlayerMessage, SendMode.Reliable);
@@ -110,21 +108,26 @@ namespace GamePlugin
             {
                 foreach (Player player in players.Values)
                 {
+                    playerWriter.Write(players.Count);
                     playerWriter.Write(player.ID);
-                    playerWriter.Write(player.X);
-                    playerWriter.Write(player.Y);
 
                     playerWriter.Write(player.ColorR);
                     playerWriter.Write(player.ColorG);
                     playerWriter.Write(player.ColorB);
                 }
 
-                using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                using (Message playerMessage = Message.Create(Tags.PlayerJoinedTag, playerWriter))
                     e.Client.SendMessage(playerMessage, SendMode.Reliable);
             }
 
             // If a message is received from a connected client, send it to CheckMessageTag to be handled
             e.Client.MessageReceived += CheckMessageTag;
+
+            if (players.Count == 4)
+            {
+                Console.WriteLine("The game is full.");
+                players.Remove(e.Client);
+            }
         }
 
         void CheckMessageTag(object sender, MessageReceivedEventArgs e)
@@ -362,39 +365,39 @@ namespace GamePlugin
             // In case someone joins late, don't generate the map again, just tell them where things are. (isAvailable not included because people aren't supposed to join after the beginning)
             else
             {
-                        using (DarkRiftWriter writer = DarkRiftWriter.Create())
-                        {
+                using (DarkRiftWriter writer = DarkRiftWriter.Create())
+                {
 
-                            string query = "SELECT cast(ID as float), cast(IsAvailable as float), cast(ItemID as float), cast(PosX as float), cast(PosY as float) FROM GatherSpots";
-                            SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
-                            DB.OpenConnection();
-                            SQLiteDataReader result = myCommand.ExecuteReader();
+                    string query = "SELECT cast(ID as float), cast(IsAvailable as float), cast(ItemID as float), cast(PosX as float), cast(PosY as float) FROM GatherSpots";
+                    SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
+                    DB.OpenConnection();
+                    SQLiteDataReader result = myCommand.ExecuteReader();
 
-                        //    if (result.HasRows)
-                        //    {
-                        //        while (result.Read())
-                        //        {
-                        //    float ID = (float)result["ID"];
-                        //    float ItemID = (float)result["ItemID"];
-                        //    float PosX = (float)result["PosX"];
-                        //    float PosY = (float)result["PosY"];
+                    //    if (result.HasRows)
+                    //    {
+                    //        while (result.Read())
+                    //        {
+                    //    float ID = (float)result["ID"];
+                    //    float ItemID = (float)result["ItemID"];
+                    //    float PosX = (float)result["PosX"];
+                    //    float PosY = (float)result["PosY"];
 
-                        //    writer.Write(ID);
-                        //    writer.Write(ItemID);
-                        //    writer.Write(PosX);
-                        //    writer.Write(PosY);
-                        //}
+                    //    writer.Write(ID);
+                    //    writer.Write(ItemID);
+                    //    writer.Write(PosX);
+                    //    writer.Write(PosY);
+                    //}
 
-                                using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
-                                {
-                                    client.SendMessage(message, SendMode.Reliable);
-                                }
-                            }
-
-                            DB.CloseConnection();
-                        }
+                    using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
+                    {
+                        client.SendMessage(message, SendMode.Reliable);
                     }
                 }
+
+                DB.CloseConnection();
+            }
+        }
+
 
 
         // Send a despawn message to remaining clients after removing a disconnected player
