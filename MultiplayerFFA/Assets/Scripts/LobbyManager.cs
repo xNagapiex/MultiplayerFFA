@@ -5,36 +5,74 @@ using DarkRift;
 using DarkRift.Client;
 using DarkRift.Client.Unity;
 
-public class LobbyManager : MonoBehaviour {
+public class LobbyManager : MonoBehaviour
+{
+    SpriteRenderer spriteRenderer;
 
     [SerializeField]
-    [Tooltip("LobbyPrefab 1.")]
-    public GameObject LobbyPrefab1;
+    [Tooltip("LobbyPlayer 1.")]
+    public GameObject LobbyPlayer1;
 
     [SerializeField]
-    [Tooltip("LobbyPrefab 2.")]
-    public GameObject LobbyPrefab2;
+    [Tooltip("LobbyPlayer 2.")]
+    public GameObject LobbyPlayer2;
 
     [SerializeField]
-    [Tooltip("LobbyPrefab 3.")]
-    public GameObject LobbyPrefab3;
+    [Tooltip("LobbyPlayer 3.")]
+    public GameObject LobbyPlayer3;
 
     [SerializeField]
-    [Tooltip("LobbyPrefab 4.")]
-    public GameObject LobbyPrefab4;
+    [Tooltip("LobbyPlayer 4.")]
+    public GameObject LobbyPlayer4;
 
-	// Use this for initialization
-	void Start () {
+    // Use this for initialization
+    void Start() {
 
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+    }
 
-    public void NewPlayerJoined(Color color, int playerCount)
+    // Update is called once per frame
+    void Update() {
+        
+    }
+
+    public void NewPlayerJoined(Color color, int id)
     {
+
+        if(id == 0){
+
+            // if GameObject == LobbyPlayer1 then do this
+            //{
+                for (int i = 0; i < 4; i++)
+                {
+                    if (i == 1 || i == 3)
+                    {
+                        LobbyPlayer1.transform.GetChild(i).GetComponent<SpriteRenderer>().color = color;
+                    }
+                    else
+                    {
+                        LobbyPlayer1.transform.GetChild(i).GetComponent<SpriteRenderer>().color = Color.white;
+                    }
+               // }
+            }
+        }
+
+        if(id == 1)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+
+            }
+        }
+
+        if(id == 2)
+        {
+
+        }
+
+        if(id == 3)
+        {
+            
+        }
         //look through untaken prefab's sprites, change color to color if carrot or hatmid, white otherwise.
         //enable start button when player count is at least 2
     }
