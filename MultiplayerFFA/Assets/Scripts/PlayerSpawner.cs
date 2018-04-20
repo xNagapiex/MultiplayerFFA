@@ -80,7 +80,6 @@ public class PlayerSpawner : MonoBehaviour
                 while (reader.Position < reader.Length)
                 {
                     ushort id = reader.ReadUInt16();
-                    ushort playerCount = reader.ReadUInt16();
 
                     Color32 color = new Color32(
                         reader.ReadByte(),
@@ -89,7 +88,7 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
-                    lobbyManager.NewPlayerJoined(color, playerCount);
+                    lobbyManager.NewPlayerJoined(color, id);
                 }
                 
             }
