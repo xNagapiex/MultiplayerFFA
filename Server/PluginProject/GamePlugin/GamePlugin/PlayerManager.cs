@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DarkRift;
 using DarkRift.Server;
+using System.Data;
 
 namespace GamePlugin
 {
@@ -14,6 +15,7 @@ namespace GamePlugin
     public class PlayerManager : Plugin
     {
         Dictionary<IClient, Player> players = new Dictionary<IClient, Player>();
+        List<SQLiteCommand> OpenCommands = new List<SQLiteCommand>();
         Database DB;
         bool gatherSpotsSpawned;
 
@@ -30,6 +32,16 @@ namespace GamePlugin
             ClientManager.ClientConnected += ClientConnected;
             ClientManager.ClientDisconnected += ClientDisconnected;
             DB = new Database();
+
+            DB.OpenConnection();
+            string playersWipeQuery = "DELETE FROM Players";
+            SQLiteCommand playersWipeCommand = new SQLiteCommand(playersWipeQuery, DB.myConnection);
+            int playersWipeResult = playersWipeCommand.ExecuteNonQuery();
+            string inventoryWipeQuery = "DELETE FROM InventorySlots";
+            SQLiteCommand inventoryWipeCommand = new SQLiteCommand(inventoryWipeQuery, DB.myConnection);
+            int inventoryWipeResult = inventoryWipeCommand.ExecuteNonQuery();
+            DB.CloseConnection();
+
             gatherSpotsSpawned = false;
             ////INSERT INTO DATABASE EXAMPLE
 
@@ -75,18 +87,30 @@ namespace GamePlugin
                 (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
                 (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
 
-                (float)0,
-                (float)0,
+                0,
+                0,
 
                 (byte)r.Next(55, 255),
                 (byte)r.Next(55, 255),
                 (byte)r.Next(55, 255)
             );
 
+            // Write new player's info to DB
+            DB.OpenConnection();
+            string newPlayerQuery = "INSERT INTO Players (ID, Health, PosX, PosY, MousePosX, MousePosY) values (@ID, @Health, @PosX, @PosY, @MousePosX, @MousePosY)";
+            SQLiteCommand newPlayerCommand = new SQLiteCommand(newPlayerQuery, DB.myConnection);
+            newPlayerCommand.Parameters.AddWithValue("@ID", e.Client.ID);
+            newPlayerCommand.Parameters.AddWithValue("@Health", 100);
+            newPlayerCommand.Parameters.AddWithValue("@PosX", newPlayer.X);
+            newPlayerCommand.Parameters.AddWithValue("@PosY", newPlayer.Y);
+            newPlayerCommand.Parameters.AddWithValue("@MousePosX", newPlayer.MX);
+            newPlayerCommand.Parameters.AddWithValue("@MousePosY", newPlayer.MY);
+            int newPlayerResult = newPlayerCommand.ExecuteNonQuery();
+            DB.CloseConnection();
+
             // Announce new player and their relevant stats to other clients (id, position and color)
             using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
             {
-                newPlayerWriter.Write(players.Count);
                 newPlayerWriter.Write(newPlayer.ID);
 
                 newPlayerWriter.Write(newPlayer.ColorR);
@@ -108,7 +132,6 @@ namespace GamePlugin
             {
                 foreach (Player player in players.Values)
                 {
-                    playerWriter.Write(players.Count);
                     playerWriter.Write(player.ID);
 
                     playerWriter.Write(player.ColorR);
@@ -122,12 +145,6 @@ namespace GamePlugin
 
             // If a message is received from a connected client, send it to CheckMessageTag to be handled
             e.Client.MessageReceived += CheckMessageTag;
-
-            if (players.Count == 4)
-            {
-                Console.WriteLine("The game is full.");
-                players.Remove(e.Client);
-            }
         }
 
         void CheckMessageTag(object sender, MessageReceivedEventArgs e)
@@ -189,51 +206,125 @@ namespace GamePlugin
         {
             using (Message message = e.GetMessage() as Message)
             {
-                // Read player's inputs (movement, mouse position)
+                // Read spot ID and check if that spot is still available (no one has gathered it yet)
                 using (DarkRiftReader reader = message.GetReader())
                 {
                     int spotID = reader.ReadUInt16();
-                    Console.WriteLine("SpotID: " + spotID);
                     float spotIDf = spotID;
 
+                    DB.OpenConnection();
                     string availabilityQuery = "SELECT IsAvailable FROM GatherSpots WHERE ID = (@SpotID)";
                     SQLiteCommand availabilityCommand = new SQLiteCommand(availabilityQuery, DB.myConnection);
-                    DB.OpenConnection();
                     availabilityCommand.Parameters.AddWithValue("@SpotID", spotID);
-                    string isAvailableresult = availabilityCommand.ExecuteScalar().ToString();
+                    SQLiteDataReader isAvailableResult = availabilityCommand.ExecuteReader();
                     int isAvailable = 0;
-                    DB.CloseConnection();
 
-                    isAvailable = Convert.ToInt32(isAvailableresult);
-                       Console.WriteLine(isAvailable);
-
-
-                    if (isAvailable == 1)
+                    if (isAvailableResult.HasRows)
                     {
-                        Console.WriteLine("Attempt to gather " + spotID + " approved");
-
-                        DB.OpenConnection();
-                        string query = "UPDATE GatherSpots SET isAvailable = 0 WHERE ID = (@SpotID)";
-                        SQLiteCommand disableCommand = new SQLiteCommand(query, DB.myConnection);
-                        disableCommand.Parameters.AddWithValue("@SpotID", spotID);
-                        int result = disableCommand.ExecuteNonQuery();
-                        DB.CloseConnection();
-
-                        // Show everyone which gather spot was taken
-                        using (DarkRiftWriter writer = DarkRiftWriter.Create())
+                        while (isAvailableResult.Read())
                         {
-                            writer.Write(spotID);
+                            Int32.TryParse(isAvailableResult["IsAvailable"].ToString(), out isAvailable);
                         }
-
-                        foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
-                            c.SendMessage(message, SendMode.Reliable);
                     }
 
                     else
                     {
-                        Console.WriteLine("Gather attempt failed");
+                        Console.WriteLine("Error, could not find gather spot of that ID (IsAvailable search)");
                     }
 
+                    DB.CloseConnection();
+
+                    // If gather attempt was successful
+                    if (isAvailable == 1)
+                    {
+                        DB.OpenConnection();
+                        Console.WriteLine("Attempt to gather " + spotID + " approved");
+                        string disableQuery = "UPDATE GatherSpots SET isAvailable = 0 WHERE ID = (@SpotID)";
+                        SQLiteCommand disableCommand = new SQLiteCommand(disableQuery, DB.myConnection);
+                        disableCommand.Parameters.AddWithValue("@SpotID", spotID);
+                        int disableResult = disableCommand.ExecuteNonQuery();
+
+                        // Show everyone which gather spot was taken
+                        foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
+                            c.SendMessage(message, SendMode.Reliable);
+
+                        // Check gather spot's itemID
+                        string itemIDQuery = "SELECT ItemID FROM GatherSpots WHERE ID = (@SpotID)";
+                        SQLiteCommand itemIDCommand = new SQLiteCommand(itemIDQuery, DB.myConnection);
+                        itemIDCommand.Parameters.AddWithValue("@SpotID", spotID);
+                        SQLiteDataReader itemIDResult = itemIDCommand.ExecuteReader();
+
+                        int itemID = 0;
+
+                        if (itemIDResult.HasRows)
+                        {
+                            while (isAvailableResult.Read())
+                            {
+                                Console.WriteLine("ItemID found");
+                                Int32.TryParse(itemIDResult["ItemID"].ToString(), out itemID);
+                            }
+
+                        }
+
+                        else
+                        {
+                            Console.WriteLine("Error, could not find gather spot of that ID (ItemID search)");
+                        }
+
+
+                        // Check if player already has a stack of this item in an inventory slot
+                        string stackQuery = "SELECT Amount FROM InventorySlots WHERE ItemID = (@ItemID) AND PlayerID = (@PlayerID)";
+                        SQLiteCommand stackCommand = new SQLiteCommand(stackQuery, DB.myConnection);
+                        stackCommand.Parameters.AddWithValue("@ItemID", itemID);
+                        stackCommand.Parameters.AddWithValue("@PlayerID", e.Client.ID);
+                        SQLiteDataReader stackResult = stackCommand.ExecuteReader();
+
+                        // Player has an existing stack of the item so just add one to the current amount
+                        if (stackResult.HasRows)
+                        {
+                            while (isAvailableResult.Read())
+                            {
+                                int currentAmount;
+                                Int32.TryParse(stackResult["Amount"].ToString(), out currentAmount);
+                                ++currentAmount;
+
+                                Console.WriteLine("Player has an existing stack");
+                                string newAmountQuery = "UPDATE InventorySlots SET Amount = @NewAmount WHERE ItemID = (@ItemID) AND PlayerID = (@PlayerID)";
+                                SQLiteCommand newAmountCommand = new SQLiteCommand(newAmountQuery, DB.myConnection);
+                                newAmountCommand.Parameters.AddWithValue("@ItemID", itemID);
+                                newAmountCommand.Parameters.AddWithValue("@PlayerID", e.Client.ID);
+                                newAmountCommand.Parameters.AddWithValue("@NewAmount", currentAmount);
+                                int newAmountResult = newAmountCommand.ExecuteNonQuery();
+                            }
+
+                            DB.CloseConnection();
+                        }
+
+                        // Player doesn't have an existing stack so create one
+                        else
+                        {
+                            Console.WriteLine("Player does not have an existing stack");
+                            string createStackQuery = "INSERT INTO InventorySlots (PlayerID, ItemID, Amount) values ((@PlayerID), (@ItemID), 1)";
+                            SQLiteCommand createStackCommand = new SQLiteCommand(createStackQuery, DB.myConnection);
+                            createStackCommand.Parameters.AddWithValue("@PlayerID", e.Client.ID);
+                            createStackCommand.Parameters.AddWithValue("@ItemID", itemID);
+                            int createStackResult = createStackCommand.ExecuteNonQuery();
+
+                            DB.CloseConnection();
+                        }
+
+                        // Update player's client with their new inventory
+
+
+                    }
+
+                    // If gather attempt failed
+                    else
+                    {
+                        Console.WriteLine("Gather attempt failed");
+                        DB.CloseConnection();
+                    }
+                    Console.WriteLine("Inventory operations finished");
                 }
             }
         }
@@ -276,23 +367,23 @@ namespace GamePlugin
                         int randomItem = r.Next(3);
                         Console.WriteLine("RandomItem: " + randomItem);
 
-                        if(trees == 0 & herbs == 0 || randomItem == 2 & 100 - i > herbs + trees)
+                        if (trees == 0 & herbs == 0 || randomItem == 2 & 100 - i > herbs + trees)
                         {
                             empty = true;
                         }
 
                         else if (trees == 0 || randomItem == 0 & herbs > 0)
                         {
-                                Console.WriteLine("Herbs is " + herbs);
-                                itemID = 0;
-                                herbs = herbs - 1;                            
+                            Console.WriteLine("Herbs is " + herbs);
+                            itemID = 0;
+                            herbs = herbs - 1;
                         }
 
                         else if (herbs == 0 || randomItem == 1 & trees > 0)
                         {
-                                Console.WriteLine("Trees is " + trees);
-                                itemID = 1;
-                                trees = trees - 1;
+                            Console.WriteLine("Trees is " + trees);
+                            itemID = 1;
+                            trees = trees - 1;
                         }
 
                         else
@@ -305,7 +396,7 @@ namespace GamePlugin
                                 herbs = herbs - 1;
                             }
 
-                            else if(herbs > trees)
+                            else if (herbs > trees)
                             {
                                 Console.WriteLine("In else");
                                 Console.WriteLine("Trees is " + trees);
@@ -335,7 +426,7 @@ namespace GamePlugin
                             writer.Write(x);
                             writer.Write(y);
                         }
-                    
+
 
                         if (x == 18)
                         {
@@ -359,7 +450,7 @@ namespace GamePlugin
                 }
 
                 Console.WriteLine("Finished writing gather spots to DB.");
-                    }
+            }
 
 
             // In case someone joins late, don't generate the map again, just tell them where things are. (isAvailable not included because people aren't supposed to join after the beginning)
@@ -368,36 +459,42 @@ namespace GamePlugin
                 using (DarkRiftWriter writer = DarkRiftWriter.Create())
                 {
 
-                    string query = "SELECT cast(ID as float), cast(IsAvailable as float), cast(ItemID as float), cast(PosX as float), cast(PosY as float) FROM GatherSpots";
+                    string query = "SELECT ID, IsAvailable, ItemID, PosX, PosY FROM GatherSpots";
                     SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
                     DB.OpenConnection();
                     SQLiteDataReader result = myCommand.ExecuteReader();
 
-                    //    if (result.HasRows)
-                    //    {
-                    //        while (result.Read())
-                    //        {
-                    //    float ID = (float)result["ID"];
-                    //    float ItemID = (float)result["ItemID"];
-                    //    float PosX = (float)result["PosX"];
-                    //    float PosY = (float)result["PosY"];
-
-                    //    writer.Write(ID);
-                    //    writer.Write(ItemID);
-                    //    writer.Write(PosX);
-                    //    writer.Write(PosY);
-                    //}
-
-                    using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
+                    if (result.HasRows)
                     {
-                        client.SendMessage(message, SendMode.Reliable);
-                    }
-                }
+                        while (result.Read())
+                        {
+                            ushort ID;
+                            UInt16.TryParse(result["ID"].ToString(), out ID);
+                            ushort ItemID;
+                            UInt16.TryParse(result["ItemID"].ToString(), out ItemID);
+                            short PosX;
+                            Int16.TryParse(result["PosX"].ToString(), out PosX);
+                            short PosY;
+                            Int16.TryParse(result["PosY"].ToString(), out PosY);
 
-                DB.CloseConnection();
+                            Console.WriteLine(result["ID"].ToString() + " " + result["ItemID"].ToString() + " " + result["PosX"].ToString() + " " + result["PosY"].ToString());
+
+                            writer.Write(ID);
+                            writer.Write(ItemID);
+                            writer.Write(PosX);
+                            writer.Write(PosY);
+                        }
+
+                        using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
+                        {
+                            client.SendMessage(message, SendMode.Reliable);
+                        }
+                    }
+
+                    DB.CloseConnection();
+                }
             }
         }
-
 
 
         // Send a despawn message to remaining clients after removing a disconnected player
@@ -423,6 +520,12 @@ namespace GamePlugin
                 string query = "DELETE FROM GatherSpots";
                 SQLiteCommand wipeCommand = new SQLiteCommand(query, DB.myConnection);
                 int result = wipeCommand.ExecuteNonQuery();
+                string playersWipeQuery = "DELETE FROM Players";
+                SQLiteCommand playersWipeCommand = new SQLiteCommand(playersWipeQuery, DB.myConnection);
+                int playersWipeResult = playersWipeCommand.ExecuteNonQuery();
+                string inventoryWipeQuery = "DELETE FROM InventorySlots";
+                SQLiteCommand inventoryWipeCommand = new SQLiteCommand(inventoryWipeQuery, DB.myConnection);
+                int inventoryWipeResult = inventoryWipeCommand.ExecuteNonQuery();
                 DB.CloseConnection();
                 gatherSpotsSpawned = false;
             }
@@ -459,4 +562,5 @@ namespace GamePlugin
             this.ColorB = colorB;
         }
     }
+
 }

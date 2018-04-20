@@ -30,6 +30,7 @@ namespace GamePlugin
             if (myConnection.State != System.Data.ConnectionState.Closed)
             {
                 myConnection.Close();
+                SQLiteConnection.ClearAllPools();
             }
         }
     }
