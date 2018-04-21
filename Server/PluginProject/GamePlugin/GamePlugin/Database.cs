@@ -15,23 +15,28 @@ namespace GamePlugin
         public Database()
         {
             myConnection = new SQLiteConnection("Data Source=GameDB.db");
+            myConnection.Open();
         }
 
-        public void OpenConnection()
-        {
-            if (myConnection.State != System.Data.ConnectionState.Open)
-            {
-                myConnection.Open();
-            }
-        }
+        //public void OpenConnection()
+        //{
+        //    if (myConnection.State != System.Data.ConnectionState.Open)
+        //    {
+        //        myConnection.Open();
+        //    }
+        //}
 
-        public void CloseConnection()
+        //public void CloseConnection()
+        //{
+        //    if (myConnection.State != System.Data.ConnectionState.Closed)
+        //    {
+        //        myConnection.Close();
+        //    }
+        //}
+
+        ~Database()
         {
-            if (myConnection.State != System.Data.ConnectionState.Closed)
-            {
-                myConnection.Close();
-                SQLiteConnection.ClearAllPools();
-            }
+            myConnection.Close();
         }
     }
 }

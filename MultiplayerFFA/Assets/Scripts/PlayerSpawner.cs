@@ -51,7 +51,7 @@ public class PlayerSpawner : MonoBehaviour
         }
 
         //MOVE TO START IF IT DOESN'T WORK HERE!!
-        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+        //lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
 
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
@@ -88,7 +88,7 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
-                    lobbyManager.NewPlayerJoined(color, id);
+                    //lobbyManager.NewPlayerJoined(color, id);
                 }
                 
             }
@@ -113,10 +113,9 @@ public class PlayerSpawner : MonoBehaviour
                 // Reading the spawn packet
                 while (reader.Position < reader.Length)
                 {
-                    print(reader.Position);
                     // Reading ID and position
                     ushort id = reader.ReadUInt16();
-                    Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), 0);
+                    Vector3 position = new Vector3(0, 0, 0);
 
                     /* This is an additional step taken to make sure that the controllable sprite renders 
                      on top of network player ones. Not essential, just a cosmetic thing. */

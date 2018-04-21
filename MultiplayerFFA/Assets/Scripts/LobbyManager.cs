@@ -38,10 +38,9 @@ public class LobbyManager : MonoBehaviour
     public void NewPlayerJoined(Color color, int id)
     {
 
-        if(id == 0){
+        if(id == 0)
+        {
 
-            // if GameObject == LobbyPlayer1 then do this
-            //{
                 for (int i = 0; i < 4; i++)
                 {
                     if (i == 1 || i == 3)
@@ -52,26 +51,52 @@ public class LobbyManager : MonoBehaviour
                     {
                         LobbyPlayer1.transform.GetChild(i).GetComponent<SpriteRenderer>().color = Color.white;
                     }
-               // }
-            }
+                }
         }
 
         if(id == 1)
         {
             for (int i = 0; i < 4; i++)
             {
-
+                if (i == 1 || i == 3)
+                {
+                    LobbyPlayer2.transform.GetChild(i).GetComponent<SpriteRenderer>().color = color;
+                }
+                else
+                {
+                    LobbyPlayer2.transform.GetChild(i).GetComponent<SpriteRenderer>().color = Color.white;
+                }
             }
         }
 
         if(id == 2)
         {
-
+            for (int i = 0; i < 4; i++)
+            {
+                if (i == 1 || i == 3)
+                {
+                    LobbyPlayer3.transform.GetChild(i).GetComponent<SpriteRenderer>().color = color;
+                }
+                else
+                {
+                    LobbyPlayer3.transform.GetChild(i).GetComponent<SpriteRenderer>().color = Color.white;
+                }
+            }
         }
 
         if(id == 3)
         {
-            
+            for (int i = 0; i < 4; i++)
+            {
+                if (i == 1 || i == 3)
+                {
+                    LobbyPlayer4.transform.GetChild(i).GetComponent<SpriteRenderer>().color = color;
+                }
+                else
+                {
+                    LobbyPlayer4.transform.GetChild(i).GetComponent<SpriteRenderer>().color = Color.white;
+                }
+            }
         }
         //look through untaken prefab's sprites, change color to color if carrot or hatmid, white otherwise.
         //enable start button when player count is at least 2
