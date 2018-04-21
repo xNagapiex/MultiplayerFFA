@@ -77,7 +77,7 @@ namespace GamePlugin
         // What happens when a new client connects
         void ClientConnected(object sender, ClientConnectedEventArgs e)
         {
-            SpawnGatherSpots(e.Client); // <---------- RELOCATE THIS TO WHEREVER THE GAME ACTUALLY BEGINS
+            //SpawnGatherSpots(e.Client); // <---------- RELOCATE THIS TO WHEREVER THE GAME ACTUALLY BEGINS
 
             Random r = new Random();
             Player newPlayer = new Player(
@@ -113,19 +113,19 @@ namespace GamePlugin
                 newPlayerWriter.Write(newPlayer.ColorG);
                 newPlayerWriter.Write(newPlayer.ColorB);
 
-                //// Use this for stuff with Lobby
-                //using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
-                //{
-                //    foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
-                //        client.SendMessage(newPlayerMessage, SendMode.Reliable);
-                //}
-
-                // Lobbyless alternative
-                using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, newPlayerWriter))
+                // Use this for stuff with Lobby
+                using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
                 {
                     foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
                         client.SendMessage(newPlayerMessage, SendMode.Reliable);
                 }
+
+                //// Lobbyless alternative
+                //using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, newPlayerWriter))
+                //{
+                //    foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
+                //        client.SendMessage(newPlayerMessage, SendMode.Reliable);
+                //}
             }
 
             // Add new player to the dictionary so that we can keep track of them
@@ -145,13 +145,13 @@ namespace GamePlugin
                     playerWriter.Write(player.ColorB);
                 }
 
-                //// Use this for stuff with Lobby
-                //using (Message playerMessage = Message.Create(Tags.PlayerJoinedTag, playerWriter))
-                //    e.Client.SendMessage(playerMessage, SendMode.Reliable);
-
-                // Lobbyless alternative
-                using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                // Use this for stuff with Lobby
+                using (Message playerMessage = Message.Create(Tags.PlayerJoinedTag, playerWriter))
                     e.Client.SendMessage(playerMessage, SendMode.Reliable);
+
+                //// Lobbyless alternative
+                //using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                //    e.Client.SendMessage(playerMessage, SendMode.Reliable);
             }
 
             // If a message is received from a connected client, send it to CheckMessageTag to be handled
