@@ -52,9 +52,6 @@ public class PlayerSpawner : MonoBehaviour
             Application.Quit();
         }
 
-        //MOVE TO START IF IT DOESN'T WORK HERE!!
-        //lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
-
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
     }
@@ -83,10 +80,6 @@ public class PlayerSpawner : MonoBehaviour
                 while (reader.Position < reader.Length)
                 {
                     ushort clientID = reader.ReadUInt16();
-
-                    // Player's X and Y, either store someplace for every player or send again later for playerspawn (latter possibly the better option)
-                    reader.ReadSingle();
-                    reader.ReadSingle();
 
                     Color32 color = new Color32(
                         reader.ReadByte(),
@@ -170,6 +163,7 @@ public class PlayerSpawner : MonoBehaviour
 
                     // Add spawned player to players that networkPlayerManager has to track
                     networkPlayerManager.Add(clientID, playerObj);
+
                 }
             }
         }
