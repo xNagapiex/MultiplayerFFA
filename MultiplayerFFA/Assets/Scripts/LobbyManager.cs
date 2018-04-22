@@ -125,23 +125,24 @@ public class LobbyManager : MonoBehaviour
         disconnectedPlayer = players[clientID];
         players.Remove(clientID);
 
+        print("Player disconnected: " + disconnectedPlayer);
+
         Color tempColor;
 
-        if (disconnectedPlayer < playerCount)
+        if (disconnectedPlayer <= playerCount)
         {
             if (disconnectedPlayer == 1)
             {
-
                 foreach (KeyValuePair<ushort, int> player in players)
                 {
-                    ushort tempClientID = player.Key;
-                    int tempPlayerCount = player.Value;
-                    players.Remove(tempClientID);
-                    --tempPlayerCount;
-                    players.Add(tempClientID, tempPlayerCount);
+                        ushort tempClientID = player.Key;
+                        int tempPlayerCount = player.Value;
+                        players.Remove(tempClientID);
+                        --tempPlayerCount;
+                        players.Add(tempClientID, tempPlayerCount);
                 }
 
-                if (players.ContainsValue(1))
+                if (players.ContainsValue(2))
                 {
                     tempColor = LobbyPlayer2.transform.GetChild(1).GetComponent<SpriteRenderer>().color;
                     LobbyPlayer1.transform.GetChild(1).GetComponent<SpriteRenderer>().color = tempColor;
@@ -149,14 +150,14 @@ public class LobbyManager : MonoBehaviour
 
                 }
 
-                if (players.ContainsValue(2))
+                if (players.ContainsValue(3))
                 {
                     tempColor = LobbyPlayer3.transform.GetChild(1).GetComponent<SpriteRenderer>().color;
                     LobbyPlayer2.transform.GetChild(1).GetComponent<SpriteRenderer>().color = tempColor;
                     LobbyPlayer2.transform.GetChild(3).GetComponent<SpriteRenderer>().color = tempColor;
                 }
 
-                if (players.ContainsValue(3))
+                if (players.ContainsValue(4))
                 {
                     tempColor = LobbyPlayer4.transform.GetChild(1).GetComponent<SpriteRenderer>().color;
                     LobbyPlayer3.transform.GetChild(1).GetComponent<SpriteRenderer>().color = tempColor;
@@ -250,9 +251,9 @@ public class LobbyManager : MonoBehaviour
         }
 
         //enable start button when player count is at least 
-        if (playerCount >= 2)
+        if (playerCount < 2)
         {
-            startButton.gameObject.SetActive(true);
+            startButton.gameObject.SetActive(false);
         }
     }
 }

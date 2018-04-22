@@ -69,6 +69,10 @@ public class PlayerSpawner : MonoBehaviour
             else if (message.Tag == Tags.PlayerJoinedTag){
                 PlayerJoined(sender, e);
             }
+            else if (message.Tag == Tags.DisconnectLobbyPlayerTag)
+            {
+                DisconnectLobbyPlayer(sender, e);
+            }
         }
     }
 
@@ -93,6 +97,21 @@ public class PlayerSpawner : MonoBehaviour
                     lobbyManager.NewPlayerJoined(color, clientID);
                 }
                 
+            }
+        }
+    }
+
+    void DisconnectLobbyPlayer(object sender, MessageReceivedEventArgs e)
+    {
+        using (Message message = e.GetMessage())
+        {
+            using (DarkRiftReader reader = message.GetReader())
+            {
+                while (reader.Position < reader.Length)
+                {
+                    ushort clientID = reader.ReadUInt16();
+                    lobbyManager.UpdateLobbyPlayer(clientID);
+                }
             }
         }
     }
