@@ -17,6 +17,7 @@ public class ItemManager : MonoBehaviour
     public GameObject tree;
 
     public Text itemGatheredText;
+    public Image loadingScreen;
 
     [SerializeField]
     [Tooltip("The herb prefab.")]
@@ -102,6 +103,8 @@ public class ItemManager : MonoBehaviour
                     }
                 }
             }
+
+            loadingScreen.enabled = false;
 
         }
     }

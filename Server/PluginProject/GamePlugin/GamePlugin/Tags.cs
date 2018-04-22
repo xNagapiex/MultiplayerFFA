@@ -14,4 +14,5 @@ static class Tags
     public static readonly ushort PlayerJoinedTag = 5;
     public static readonly ushort InventoryUpdateTag = 6;
     public static readonly ushort DisconnectLobbyPlayerTag = 7;
+    public static readonly ushort StartGameTag = 8;
 }

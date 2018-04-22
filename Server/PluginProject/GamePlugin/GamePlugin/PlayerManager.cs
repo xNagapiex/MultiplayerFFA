@@ -52,10 +52,9 @@ namespace GamePlugin
         // What happens when a new client connects
         void ClientConnected(object sender, ClientConnectedEventArgs e)
         {
-            if (ClientManager.Count < 4)
+            if (ClientManager.Count < 4 && !gameStarted)
             {
                 Console.WriteLine("New playerCount: " + ClientManager.Count);
-                SpawnGatherSpots(e.Client); // <---------- RELOCATE THIS TO WHEREVER THE GAME ACTUALLY BEGINS
 
                 Random r = new Random();
 
@@ -131,26 +130,23 @@ namespace GamePlugin
                     using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
                     {
                         newPlayerWriter.Write(newPlayer.ClientID);
-                        newPlayerWriter.Write(newPlayer.X);
-                        newPlayerWriter.Write(newPlayer.Y);
-                        // Mouse position is not sent here because it's irrelevant and will be updated pretty much instantly
                         newPlayerWriter.Write(newPlayer.R);
                         newPlayerWriter.Write(newPlayer.G);
                         newPlayerWriter.Write(newPlayer.B);
 
-                        //// Use this for stuff with Lobby
-                        //using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
-                        //{
-                        //    foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
-                        //        client.SendMessage(newPlayerMessage, SendMode.Reliable);
-                        //}
-
-                        // Lobbyless alternative
-                        using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, newPlayerWriter))
+                        // Use this for stuff with Lobby
+                        using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
                         {
                             foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
                                 client.SendMessage(newPlayerMessage, SendMode.Reliable);
                         }
+
+                        //// Lobbyless alternative
+                        //using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, newPlayerWriter))
+                        //{
+                        //    foreach (IClient client in ClientManager.GetAllClients().Where(x => x != e.Client))
+                        //        client.SendMessage(newPlayerMessage, SendMode.Reliable);
+                        //}
                     }
                 }
 
@@ -161,21 +157,18 @@ namespace GamePlugin
                     foreach(Player player in players.Values)
                     {
                         playerWriter.Write(player.ClientID);
-                        playerWriter.Write(player.X);
-                        playerWriter.Write(player.Y);
-                        // Mouse position is not sent here because it's irrelevant and will be updated pretty much instantly
                         playerWriter.Write(player.R);
                         playerWriter.Write(player.G);
                         playerWriter.Write(player.B);
                     }
 
-                    //// Use this for stuff with Lobby
-                    //using (Message playerMessage = Message.Create(Tags.PlayerJoinedTag, playerWriter))
-                    //    e.Client.SendMessage(playerMessage, SendMode.Reliable);
-
-                    // Lobbyless alternative
-                    using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                    // Use this for stuff with Lobby
+                    using (Message playerMessage = Message.Create(Tags.PlayerJoinedTag, playerWriter))
                         e.Client.SendMessage(playerMessage, SendMode.Reliable);
+
+                    //// Lobbyless alternative
+                    //using (Message playerMessage = Message.Create(Tags.SpawnPlayerTag, playerWriter))
+                    //    e.Client.SendMessage(playerMessage, SendMode.Reliable);
                 }
 
                 // If a message is received from a connected client, send it to CheckMessageTag to be handled
@@ -184,7 +177,7 @@ namespace GamePlugin
 
             else
             {
-                // ADD SOME MORE ELEGANT WAY TO HANDLE A CLIENT WHEN THERE ARE ALREADY 4 PLAYERS ON THE SERVER
+                // ADD SOME MORE ELEGANT WAY TO HANDLE A CLIENT WHEN THERE ARE ALREADY 4 PLAYERS ON THE SERVER OR THE GAME IS IN PROGRESS
                 e.Client.Disconnect();
             }
         }
@@ -205,6 +198,38 @@ namespace GamePlugin
                 {
                     GatherMessageReceived(sender, e);
                 }
+
+                else if (message.Tag == Tags.StartGameTag)
+                {
+                    StartGame(sender, e);
+                }
+            }
+        }
+
+        void StartGame(object sender, MessageReceivedEventArgs e)
+        {
+            // Spawn gather spots first so that we won't have players floating around in an empty area before they can even play
+            SpawnGatherSpots();
+
+            using (DarkRiftWriter spawnWriter = DarkRiftWriter.Create())
+            {
+                foreach (Player player in players.Values)
+                {
+                    spawnWriter.Write(player.ClientID);
+                    spawnWriter.Write(player.X);
+                    spawnWriter.Write(player.Y);
+                    // Mouse position is not sent here because it's irrelevant and will be updated pretty much instantly
+                    spawnWriter.Write(player.R);
+                    spawnWriter.Write(player.G);
+                    spawnWriter.Write(player.B);
+                }
+
+                // Spawn all players in all clients
+                using (Message newPlayerMessage = Message.Create(Tags.SpawnPlayerTag, spawnWriter))
+                {
+                    foreach (IClient client in ClientManager.GetAllClients())
+                        client.SendMessage(newPlayerMessage, SendMode.Reliable);
+                }
             }
         }
 
@@ -222,24 +247,34 @@ namespace GamePlugin
                     float newMY = reader.ReadSingle();
 
                     Player player = players[e.Client];
-                    player.X = newX;
-                    player.Y = newY;
-                    player.MX = newMX;
-                    player.MY = newMY;
+                    bool believable = true;
 
-                    // Send player's inputs to other clients
-                    using (DarkRiftWriter writer = DarkRiftWriter.Create())
+                    if(Math.Abs(newX - player.X) > 1 || Math.Abs(newY - player.Y) > 1)
                     {
-                        writer.Write(e.Client.ID);
-                        writer.Write(player.X);
-                        writer.Write(player.Y);
-                        writer.Write(player.MX);
-                        writer.Write(player.MY);
-                        message.Serialize(writer);
+                        believable = false;
                     }
 
-                    foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
-                        c.SendMessage(message, SendMode.Reliable);
+                    if (believable)
+                    {
+                        player.X = newX;
+                        player.Y = newY;
+                        player.MX = newMX;
+                        player.MY = newMY;
+
+                        // Send player's inputs to other clients
+                        using (DarkRiftWriter writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(e.Client.ID);
+                            writer.Write(player.X);
+                            writer.Write(player.Y);
+                            writer.Write(player.MX);
+                            writer.Write(player.MY);
+                            message.Serialize(writer);
+                        }
+
+                        foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
+                            c.SendMessage(message, SendMode.Reliable);
+                    }
                 }
             }
         }
@@ -384,13 +419,11 @@ namespace GamePlugin
         }
 
         // Writing gather spots received from host to DB - Taru Konttinen 18.4.2018
-        void SpawnGatherSpots(IClient client)
+        void SpawnGatherSpots()
         {
             // If gather spots haven't been spawned/map hasn't been generated, generate it now and send it to all players
             if (!gatherSpotsSpawned)
             {
-                gameStarted = true;
-
                 using (DarkRiftWriter writer = DarkRiftWriter.Create())
                 {
                     Console.WriteLine("Spawning gather spots");
@@ -499,46 +532,45 @@ namespace GamePlugin
             }
 
 
-            // In case someone joins late, don't generate the map again, just tell them where things are. (isAvailable not included because people aren't supposed to join after the beginning)
-            else
-            {
-                using (DarkRiftWriter writer = DarkRiftWriter.Create())
-                {
+            //// In case someone joins late, don't generate the map again, just tell them where things are. (isAvailable not included because people aren't supposed to join after the beginning)
+            //else
+            //{
+            //    using (DarkRiftWriter writer = DarkRiftWriter.Create())
+            //    {
 
-                    string query = "SELECT ID, IsAvailable, ItemID, PosX, PosY FROM GatherSpots";
-                    SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
-                    SQLiteDataReader result = myCommand.ExecuteReader();
+            //        string query = "SELECT ID, IsAvailable, ItemID, PosX, PosY FROM GatherSpots";
+            //        SQLiteCommand myCommand = new SQLiteCommand(query, DB.myConnection);
+            //        SQLiteDataReader result = myCommand.ExecuteReader();
 
-                    if (result.HasRows)
-                    {
-                        while (result.Read())
-                        {
-                            ushort ID;
-                            UInt16.TryParse(result["ID"].ToString(), out ID);
-                            ushort ItemID;
-                            UInt16.TryParse(result["ItemID"].ToString(), out ItemID);
-                            short PosX;
-                            Int16.TryParse(result["PosX"].ToString(), out PosX);
-                            short PosY;
-                            Int16.TryParse(result["PosY"].ToString(), out PosY);
+            //        if (result.HasRows)
+            //        {
+            //            while (result.Read())
+            //            {
+            //                ushort ID;
+            //                UInt16.TryParse(result["ID"].ToString(), out ID);
+            //                ushort ItemID;
+            //                UInt16.TryParse(result["ItemID"].ToString(), out ItemID);
+            //                short PosX;
+            //                Int16.TryParse(result["PosX"].ToString(), out PosX);
+            //                short PosY;
+            //                Int16.TryParse(result["PosY"].ToString(), out PosY);
 
-                            Console.WriteLine(result["ID"].ToString() + " " + result["ItemID"].ToString() + " " + result["PosX"].ToString() + " " + result["PosY"].ToString());
+            //                Console.WriteLine(result["ID"].ToString() + " " + result["ItemID"].ToString() + " " + result["PosX"].ToString() + " " + result["PosY"].ToString());
 
-                            writer.Write(ID);
-                            writer.Write(ItemID);
-                            writer.Write(PosX);
-                            writer.Write(PosY);
-                        }
+            //                writer.Write(ID);
+            //                writer.Write(ItemID);
+            //                writer.Write(PosX);
+            //                writer.Write(PosY);
+            //            }
 
-                        using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
-                        {
-                            client.SendMessage(message, SendMode.Reliable);
-                        }
-                    }
+            //            using (Message message = Message.Create(Tags.GatherSpotsTag, writer))
+            //            {
+            //                client.SendMessage(message, SendMode.Reliable);
+            //            }
+            //        }
 
-                }
+            //    }
             }
-        }
 
 
         // Send a despawn message to remaining clients after removing a disconnected player
