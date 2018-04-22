@@ -16,8 +16,8 @@ public class ItemManager : MonoBehaviour
     [Tooltip("The tree frefab.")]
     public GameObject tree;
 
-    public Text itemGatheredText;
-    public Image loadingScreen;
+    Text itemGatheredText;
+    GameObject loadingScreen;
 
     [SerializeField]
     [Tooltip("The herb prefab.")]
@@ -104,7 +104,9 @@ public class ItemManager : MonoBehaviour
                 }
             }
 
-            loadingScreen.enabled = false;
+            loadingScreen = GameObject.Find("LoadingScreen");
+            itemGatheredText = GameObject.Find("ItemPickUpText").GetComponent<Text>();
+            loadingScreen.SetActive(false);
 
         }
     }

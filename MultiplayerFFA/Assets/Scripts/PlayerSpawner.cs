@@ -30,8 +30,6 @@ public class PlayerSpawner : MonoBehaviour
 
     LobbyManager lobbyManager;
 
-    bool gameStarted;
-
     void Awake()
     {
         if (client == null)
@@ -118,7 +116,6 @@ public class PlayerSpawner : MonoBehaviour
 
     void SpawnPlayer(object sender, MessageReceivedEventArgs e)
     {
-        gameStarted = true;
 
         using (Message message = e.GetMessage())
         {
@@ -198,15 +195,20 @@ public class PlayerSpawner : MonoBehaviour
         {
             using (DarkRiftReader reader = message.GetReader())
             {
-                if (!gameStarted)
-                {
-                    lobbyManager.UpdateLobbyPlayer(reader.ReadUInt16());
-                }
-                else
-                {
-                    networkPlayerManager.DestroyPlayer(reader.ReadUInt16());
-                }
+                networkPlayerManager.DestroyPlayer(reader.ReadUInt16());               
             }
+        }
+    }
+
+    public void StartGame()
+    {
+        using (DarkRiftWriter writer = DarkRiftWriter.Create())
+        {
+            bool gamestarted = true;
+            writer.Write(gamestarted);
+
+            using (Message message = Message.Create(Tags.StartGameTag, writer))
+                client.SendMessage(message, SendMode.Unreliable);
         }
     }
 }

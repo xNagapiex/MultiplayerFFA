@@ -15,18 +15,28 @@ public class Menu : MonoBehaviour {
 		
 	}
 
+    // Goes to Lobby
     public void PlayButton()
     {
         SceneManager.LoadScene("Lobby");
     }
 
+    // Quits
     public void QuitButton()
     {
         Application.Quit();
     }
 
-    public void ToLobby()
+    // Goes back to menu
+    public void ToMenu()
+    {
+        SceneManager.LoadScene("Menu");
+    }
+
+    // Starts game
+    public void StartGame()
     {
         SceneManager.LoadScene("NetworkTest");
+        GameObject.Find("Network").GetComponent<PlayerSpawner>().StartGame();
     }
 }
