@@ -577,7 +577,7 @@ namespace GamePlugin
         void ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
             // Inform other players of the disconnect if there are other players
-            if (ClientManager.Count > 1)
+            if (ClientManager.Count > 0)
             {
                 if (gameStarted)
                 {

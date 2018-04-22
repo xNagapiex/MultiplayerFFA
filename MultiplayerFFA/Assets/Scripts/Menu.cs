@@ -37,6 +37,6 @@ public class Menu : MonoBehaviour {
     public void StartGame()
     {
         SceneManager.LoadScene("NetworkTest");
-        GameObject.Find("Network").GetComponent<PlayerSpawner>().StartGame();
+        //GameObject.Find("Network").GetComponent<PlayerSpawner>().StartGame();
     }
 }
