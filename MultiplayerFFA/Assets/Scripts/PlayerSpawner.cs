@@ -52,6 +52,8 @@ public class PlayerSpawner : MonoBehaviour
             Application.Quit();
         }
 
+        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
     }
@@ -88,7 +90,7 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
-                    //lobbyManager.NewPlayerJoined(color, id);
+                    lobbyManager.NewPlayerJoined(color, clientID);
                 }
                 
             }
