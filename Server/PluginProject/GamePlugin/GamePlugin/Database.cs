@@ -18,22 +18,6 @@ namespace GamePlugin
             myConnection.Open();
         }
 
-        //public void OpenConnection()
-        //{
-        //    if (myConnection.State != System.Data.ConnectionState.Open)
-        //    {
-        //        myConnection.Open();
-        //    }
-        //}
-
-        //public void CloseConnection()
-        //{
-        //    if (myConnection.State != System.Data.ConnectionState.Closed)
-        //    {
-        //        myConnection.Close();
-        //    }
-        //}
-
         ~Database()
         {
             myConnection.Close();

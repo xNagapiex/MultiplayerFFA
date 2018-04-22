@@ -30,6 +30,8 @@ public class PlayerSpawner : MonoBehaviour
 
     LobbyManager lobbyManager;
 
+    bool gameStarted;
+
     void Awake()
     {
         if (client == null)
@@ -51,7 +53,7 @@ public class PlayerSpawner : MonoBehaviour
         }
 
         //MOVE TO START IF IT DOESN'T WORK HERE!!
-        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+        //lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
 
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
@@ -73,12 +75,14 @@ public class PlayerSpawner : MonoBehaviour
 
     void PlayerJoined(object sender, MessageReceivedEventArgs e)
     {
+
         using (Message message = e.GetMessage())
         {
             using (DarkRiftReader reader = message.GetReader())
             {
                 while (reader.Position < reader.Length)
                 {
+                    ushort clientID = reader.ReadUInt16();
                     ushort id = reader.ReadUInt16();
 
                     Color32 color = new Color32(
@@ -88,7 +92,7 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
-                    lobbyManager.NewPlayerJoined(color, id);
+                    //lobbyManager.NewPlayerJoined(color, id);
                 }
                 
             }
@@ -97,6 +101,8 @@ public class PlayerSpawner : MonoBehaviour
 
     void SpawnPlayer(object sender, MessageReceivedEventArgs e)
     {
+        gameStarted = true;
+
         using (Message message = e.GetMessage())
         {
             using (DarkRiftReader reader = message.GetReader())
@@ -114,12 +120,13 @@ public class PlayerSpawner : MonoBehaviour
                 while (reader.Position < reader.Length)
                 {
                     // Reading ID and position
+                    ushort clientID = reader.ReadUInt16();
                     ushort id = reader.ReadUInt16();
                     Vector3 position = new Vector3(0, 0, 0);
 
                     /* This is an additional step taken to make sure that the controllable sprite renders 
                      on top of network player ones. Not essential, just a cosmetic thing. */
-                    if (id == client.ID)
+                    if (clientID == client.ID)
                     {
                         position.z = -2;
                     }
@@ -132,11 +139,12 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
+                    //print("Spawn message: " + clientID + id + color.r + color.g + color.b);
 
                     GameObject obj;
 
                     // If the spawned player is the controllable player, spawn them as the controllable prefab
-                    if (id == client.ID)
+                    if (clientID == client.ID)
                     {
                         obj = Instantiate(controllablePrefab, position, Quaternion.identity) as GameObject;
 
@@ -173,7 +181,14 @@ public class PlayerSpawner : MonoBehaviour
         {
             using (DarkRiftReader reader = message.GetReader())
             {
-                networkPlayerManager.DestroyPlayer(reader.ReadUInt16());
+                if (!gameStarted)
+                {
+                    lobbyManager.UpdateLobbyPlayer(reader.ReadUInt16());
+                }
+                else
+                {
+                    networkPlayerManager.DestroyPlayer(reader.ReadUInt16());
+                }
             }
         }
     }

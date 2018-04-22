@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DarkRift.Client;
 using DarkRift;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ItemManager : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class ItemManager : MonoBehaviour
     [SerializeField]
     [Tooltip("The tree frefab.")]
     public GameObject tree;
+
+    public Text itemGatheredText;
 
     [SerializeField]
     [Tooltip("The herb prefab.")]
@@ -38,6 +41,11 @@ public class ItemManager : MonoBehaviour
             else if (message.Tag == Tags.GatherItemTag)
             {
                 UpdateGatherSpots(sender, e);
+            }
+
+            else if (message.Tag == Tags.InventoryUpdateTag)
+            {
+                InventoryUpdate(sender, e);
             }
         }
     }
@@ -73,16 +81,12 @@ public class ItemManager : MonoBehaviour
                     ushort itemID = reader.ReadUInt16();
                     Vector3 pos = new Vector3(reader.ReadInt16(), reader.ReadInt16(), 1);
 
-                    print("SpotID: " + spotID);
-                    print("ItemID: " + itemID);
-                    print("X: " + pos.x);
-                    print("Y: " + pos.y);
-
                     if (itemID == 0)
                     {
                         GameObject temp = Instantiate(herb, pos, Quaternion.identity);
                         GatherSpot gatherScript = temp.GetComponent<GatherSpot>();
                         gatherScript.SetID(spotID);
+                        gatherScript.SetItemID(0);
                         gatherScript.SetItemManager(this);
                         gatherSpots.Add(spotID, gatherScript);
                     }
@@ -92,6 +96,7 @@ public class ItemManager : MonoBehaviour
                         GameObject temp = Instantiate(tree, pos, Quaternion.identity);
                         GatherSpot gatherScript = temp.GetComponent<GatherSpot>();
                         gatherScript.SetID(spotID);
+                        gatherScript.SetItemID(1);
                         gatherScript.SetItemManager(this);
                         gatherSpots.Add(spotID, gatherScript);
                     }
@@ -110,6 +115,51 @@ public class ItemManager : MonoBehaviour
 
             using (Message message = Message.Create(Tags.GatherItemTag, writer))
                 client.SendMessage(message, SendMode.Reliable);
+        }
+
+        string itemName = " ";
+        int itemID = gatherSpots[ID].GetItemID();
+
+        if (itemID == 0)
+        {
+            itemName = "Herb";
+        }
+
+        else if (itemID == 1)
+        {
+            itemName = "Wood";
+        }
+
+        if (itemGatheredText != null)
+        {
+            itemGatheredText.text = "Got " + itemName;
+        }
+    }
+
+    void InventoryUpdate(object sender, MessageReceivedEventArgs e)
+    {
+        using (Message message = e.GetMessage())
+        {
+            using (DarkRiftReader reader = message.GetReader())
+            {
+                //string itemName = " ";
+                //ushort itemID = reader.ReadUInt16();
+
+                //if (itemID == 0)
+                //{
+                //    itemName = "Herb";
+                //}
+
+                //else if (itemID == 1)
+                //{
+                //    itemName = "Wood";
+                //}
+
+                if (itemGatheredText != null)
+                {
+                    itemGatheredText.text = " ";
+                }
+            }
         }
     }
 }

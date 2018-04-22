@@ -12,5 +12,7 @@ using System.Threading;
         public static readonly ushort GatherItemTag = 3;
         public static readonly ushort GatherSpotsTag = 4;
         public static readonly ushort PlayerJoinedTag = 5;
+        public static readonly ushort InventoryUpdateTag = 6;
+        public static readonly ushort DisconnectLobbyPlayerTag = 7;
 }
 

@@ -6,6 +6,7 @@ public class GatherSpot : MonoBehaviour {
 
     [SerializeField]
     int ID;
+    int itemID;
 
     public Sprite normalSprite;
     public Sprite harvestedSprite;
@@ -50,6 +51,16 @@ public class GatherSpot : MonoBehaviour {
     public void SetID(int newID)
     {
         ID = newID;
+    }
+
+    public void SetItemID(int newID)
+    {
+        itemID = newID;
+    }
+
+    public int GetItemID()
+    {
+        return itemID;
     }
 
     public void SetItemManager(ItemManager it)

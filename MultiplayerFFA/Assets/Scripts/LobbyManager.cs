@@ -101,4 +101,9 @@ public class LobbyManager : MonoBehaviour
         //look through untaken prefab's sprites, change color to color if carrot or hatmid, white otherwise.
         //enable start button when player count is at least 2
     }
+
+    public void UpdateLobbyPlayer(ushort id)
+    {
+
+    }
 }
