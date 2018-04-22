@@ -60,6 +60,11 @@ public class PlayerSpawner : MonoBehaviour
             lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
         }
 
+        if(GameObject.Find("Main Camera"))
+        {
+            camera = GameObject.Find("Main Camera").GetComponent<CameraFollow>();
+        }
+
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
     }
@@ -182,7 +187,12 @@ public class PlayerSpawner : MonoBehaviour
                         playerNetworking.Client = client;
 
                         // Command camera to follow player
-                        camera.SetCameraTarget(obj.transform);
+
+                        if (GameObject.Find("Main Camera"))
+                        {
+                            camera = GameObject.Find("Main Camera").GetComponent<CameraFollow>();
+                            camera.SetCameraTarget(obj.transform);
+                        }
                     }
 
                     // Otherwise, spawn a network player
@@ -224,7 +234,7 @@ public class PlayerSpawner : MonoBehaviour
             bool gamestarted = true;
             writer.Write(gamestarted);
 
-            using (Message message = Message.Create(Tags.MovePlayerTag, writer))
+            using (Message message = Message.Create(Tags.StartGameTag, writer))
                 client.SendMessage(message, SendMode.Unreliable);
         }
     }

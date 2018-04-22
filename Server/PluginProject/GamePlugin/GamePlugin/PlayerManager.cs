@@ -17,6 +17,7 @@ namespace GamePlugin
         Database DB;
         bool gatherSpotsSpawned;
         bool gameStarted;
+        bool joinLock;
         List<int> takenColors = new List<int>(); // This exists to make it easier to filter out taken colors
         Dictionary<IClient, Player> players = new Dictionary<IClient, Player>();
 
@@ -47,12 +48,13 @@ namespace GamePlugin
 
             gatherSpotsSpawned = false;
             gameStarted = false;
+            joinLock = false;
         }
 
         // What happens when a new client connects
         void ClientConnected(object sender, ClientConnectedEventArgs e)
         {
-            if (ClientManager.Count < 4 && !gameStarted)
+            if (ClientManager.Count < 4 && !joinLock)
             {
                 Console.WriteLine("New playerCount: " + ClientManager.Count);
 
@@ -187,16 +189,19 @@ namespace GamePlugin
         {
             using (Message message = e.GetMessage() as Message)
             {
-                // Player movement
-                if (message.Tag == Tags.MovePlayerTag)
+                if (gameStarted)
                 {
-                    MovementMessageReceived(sender, e);
-                }
+                    // Player movement
+                    if (message.Tag == Tags.MovePlayerTag)
+                    {
+                        MovementMessageReceived(sender, e);
+                    }
 
-                // Picking up items
-                else if (message.Tag == Tags.GatherItemTag)
-                {
-                    GatherMessageReceived(sender, e);
+                    // Picking up items
+                    else if (message.Tag == Tags.GatherItemTag)
+                    {
+                        GatherMessageReceived(sender, e);
+                    }
                 }
 
                 else if (message.Tag == Tags.StartGameTag)
@@ -208,9 +213,18 @@ namespace GamePlugin
 
         void StartGame(object sender, MessageReceivedEventArgs e)
         {
+            joinLock = true;
+
+
             using (Message message = e.GetMessage() as Message)
             {
-                foreach (IClient c in ClientManager.GetAllClients())
+                // Read player's inputs (movement, mouse position)
+                using (DarkRiftReader reader = message.GetReader())
+                {
+                    reader.ReadBoolean();
+                }
+
+                        foreach (IClient c in ClientManager.GetAllClients())
                     c.SendMessage(message, SendMode.Reliable);
             }
 
@@ -237,6 +251,8 @@ namespace GamePlugin
                         client.SendMessage(newPlayerMessage, SendMode.Reliable);
                 }
             }
+
+            gameStarted = true;
         }
 
         // Reacting to player moving
