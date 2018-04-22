@@ -83,7 +83,10 @@ public class PlayerSpawner : MonoBehaviour
                 while (reader.Position < reader.Length)
                 {
                     ushort clientID = reader.ReadUInt16();
-                    ushort id = reader.ReadUInt16();
+
+                    // Player's X and Y, either store someplace for every player or send again later for playerspawn (latter possibly the better option)
+                    reader.ReadSingle();
+                    reader.ReadSingle();
 
                     Color32 color = new Color32(
                         reader.ReadByte(),
@@ -121,8 +124,7 @@ public class PlayerSpawner : MonoBehaviour
                 {
                     // Reading ID and position
                     ushort clientID = reader.ReadUInt16();
-                    ushort id = reader.ReadUInt16();
-                    Vector3 position = new Vector3(0, 0, 0);
+                    Vector3 position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), 0);
 
                     /* This is an additional step taken to make sure that the controllable sprite renders 
                      on top of network player ones. Not essential, just a cosmetic thing. */
@@ -167,7 +169,7 @@ public class PlayerSpawner : MonoBehaviour
                     playerObj.SetColor(color);
 
                     // Add spawned player to players that networkPlayerManager has to track
-                    networkPlayerManager.Add(id, playerObj);
+                    networkPlayerManager.Add(clientID, playerObj);
                 }
             }
         }

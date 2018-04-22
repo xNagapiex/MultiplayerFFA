@@ -18,6 +18,7 @@ namespace GamePlugin
         bool gatherSpotsSpawned;
         bool gameStarted;
         List<int> takenColors = new List<int>(); // This exists to make it easier to filter out taken colors
+        Dictionary<IClient, Player> players = new Dictionary<IClient, Player>();
 
         const float MAP_WIDTH = 20;
 
@@ -56,52 +57,72 @@ namespace GamePlugin
                 Console.WriteLine("New playerCount: " + ClientManager.Count);
                 SpawnGatherSpots(e.Client); // <---------- RELOCATE THIS TO WHEREVER THE GAME ACTUALLY BEGINS
 
-                ushort newPlayerID = Convert.ToUInt16(ClientManager.Count);
-
                 Random r = new Random();
 
-                float newPlayerX = (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2;
-                float newPlayerY = (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2;
-
-                // Write new player's info to DB
-                string newPlayerQuery = "INSERT INTO Players (ClientID, PlayerID, Health, PosX, PosY, MousePosX, MousePosY) values (@ClientID, @PlayerID, @Health, @PosX, @PosY, 0, 0)";
-                SQLiteCommand newPlayerCommand = new SQLiteCommand(newPlayerQuery, DB.myConnection);
-                newPlayerCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                newPlayerCommand.Parameters.AddWithValue("@PlayerID", newPlayerID);
-                newPlayerCommand.Parameters.AddWithValue("@Health", 100);
-                newPlayerCommand.Parameters.AddWithValue("@PosX", newPlayerX);
-                newPlayerCommand.Parameters.AddWithValue("@PosY", newPlayerY);
-                int newPlayerResult = newPlayerCommand.ExecuteNonQuery();
-
-                int newColorNo = r.Next(1, 10);
+                ushort colorID = (ushort)r.Next(1, 10);
                 bool colorTaken = true;
 
-                while(colorTaken)
+                // Check if color is taken
+                while (colorTaken)
                 {
-                    if(takenColors.Contains(newColorNo))
+                    if (takenColors.Contains(colorID))
                     {
-                        ++newColorNo;
+                        ++colorID;
 
-                        if(newColorNo > 9)
+                        if (colorID > 9)
                         {
-                            newColorNo = 1;
+                            colorID = 1;
                         }
                     }
-                    
+
                     else
                     {
-                        takenColors.Add(newColorNo);
                         colorTaken = false;
+                        takenColors.Add(colorID);
                     }
                 }
 
-                // Mark color's owner in the DB
-                string markColorQuery = "UPDATE Colors SET ClientID = @ClientID WHERE ColorID = @MyColor";
-                SQLiteCommand markColorCommand = new SQLiteCommand(markColorQuery, DB.myConnection);
-                markColorCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                markColorCommand.Parameters.AddWithValue("@MyColor", newColorNo);
-                int markColorResult = markColorCommand.ExecuteNonQuery();
+                // Get the values of the color and use them when creating the new player
+                string colorValuesQuery = "SELECT R, G, B FROM Colors WHERE ColorID = (@ColorID)";
+                SQLiteCommand colorValuesCommand = new SQLiteCommand(colorValuesQuery, DB.myConnection);
+                colorValuesCommand.Parameters.AddWithValue("@ColorID", colorID);
+                SQLiteDataReader colorValuesResult = colorValuesCommand.ExecuteReader();
 
+                byte R = 0;
+                byte G = 0;
+                byte B = 0;
+
+                if (colorValuesResult.HasRows)
+                {
+                    while (colorValuesResult.Read())
+                    {
+                        Byte.TryParse(colorValuesResult["R"].ToString(), out R);
+                        Byte.TryParse(colorValuesResult["G"].ToString(), out G);
+                        Byte.TryParse(colorValuesResult["B"].ToString(), out B);
+                    }
+                }
+
+                // Create new player and add them to the players list
+                Player newPlayer = new Player(
+                    e.Client.ID,
+                    (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
+                    (float)r.NextDouble() * MAP_WIDTH - MAP_WIDTH / 2,
+                    0,
+                    0,
+                    colorID,
+                    R,
+                    G,
+                    B
+                    );
+
+                players.Add(e.Client, newPlayer);
+
+                // Write new player's info to DB
+                string newPlayerQuery = "INSERT INTO Players values (@ClientID, @Health)";
+                SQLiteCommand newPlayerCommand = new SQLiteCommand(newPlayerQuery, DB.myConnection);
+                newPlayerCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
+                newPlayerCommand.Parameters.AddWithValue("@Health", 100);
+                int newPlayerResult = newPlayerCommand.ExecuteNonQuery();
 
                 // Announce new player and their relevant stats to other clients (id, position and color)
                 // Don't do this if there is only one client connected - for obvious reasons
@@ -109,32 +130,13 @@ namespace GamePlugin
                 {
                     using (DarkRiftWriter newPlayerWriter = DarkRiftWriter.Create())
                     {
-                        newPlayerWriter.Write(e.Client.ID);
-                        newPlayerWriter.Write(newPlayerID);
-
-                        // Get the values of the color and send them
-                        string colorValuesQuery = "SELECT R, G, B FROM Colors WHERE ClientID = (@ClientID)";
-                        SQLiteCommand colorValuesCommand = new SQLiteCommand(colorValuesQuery, DB.myConnection);
-                        colorValuesCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                        SQLiteDataReader colorValuesResult = colorValuesCommand.ExecuteReader();
-
-                        if (colorValuesResult.HasRows)
-                        {
-                            while (colorValuesResult.Read())
-                            {
-                                byte R;
-                                byte G;
-                                byte B;
-
-                                Byte.TryParse(colorValuesResult["R"].ToString(), out R);
-                                Byte.TryParse(colorValuesResult["G"].ToString(), out G);
-                                Byte.TryParse(colorValuesResult["B"].ToString(), out B);
-
-                                newPlayerWriter.Write(R);
-                                newPlayerWriter.Write(G);
-                                newPlayerWriter.Write(B);
-                            }
-                        }
+                        newPlayerWriter.Write(newPlayer.ClientID);
+                        newPlayerWriter.Write(newPlayer.X);
+                        newPlayerWriter.Write(newPlayer.Y);
+                        // Mouse position is not sent here because it's irrelevant and will be updated pretty much instantly
+                        newPlayerWriter.Write(newPlayer.R);
+                        newPlayerWriter.Write(newPlayer.G);
+                        newPlayerWriter.Write(newPlayer.B);
 
                         //// Use this for stuff with Lobby
                         //using (Message newPlayerMessage = Message.Create(Tags.PlayerJoinedTag, newPlayerWriter))
@@ -155,33 +157,16 @@ namespace GamePlugin
                 // Send the new player their own info (id, position, color) and the info about other players
                 using (DarkRiftWriter playerWriter = DarkRiftWriter.Create())
                 {
-                    // Get the lobby info of all players
-                    string existingPlayersQuery = "SELECT Players.ClientID as Client, PlayerID, R, G, B FROM Players INNER JOIN Colors ON Players.ClientID = Colors.ClientID";
-                    SQLiteCommand existingPlayersCommand = new SQLiteCommand(existingPlayersQuery, DB.myConnection);
-                    SQLiteDataReader existingPlayersResult = existingPlayersCommand.ExecuteReader();
-
-                    if (existingPlayersResult.HasRows)
+                    // Get the info of all players
+                    foreach(Player player in players.Values)
                     {
-                        while (existingPlayersResult.Read())
-                        {
-                            ushort clientID;
-                            ushort playerID;
-                            byte R;
-                            byte G;
-                            byte B;
-
-                            UInt16.TryParse(existingPlayersResult["Client"].ToString(), out clientID);
-                            UInt16.TryParse(existingPlayersResult["PlayerID"].ToString(), out playerID);
-                            Byte.TryParse(existingPlayersResult["R"].ToString(), out R);
-                            Byte.TryParse(existingPlayersResult["G"].ToString(), out G);
-                            Byte.TryParse(existingPlayersResult["B"].ToString(), out B);
-
-                            playerWriter.Write(clientID);
-                            playerWriter.Write(playerID);
-                            playerWriter.Write(R);
-                            playerWriter.Write(G);
-                            playerWriter.Write(B);
-                        }
+                        playerWriter.Write(player.ClientID);
+                        playerWriter.Write(player.X);
+                        playerWriter.Write(player.Y);
+                        // Mouse position is not sent here because it's irrelevant and will be updated pretty much instantly
+                        playerWriter.Write(player.R);
+                        playerWriter.Write(player.G);
+                        playerWriter.Write(player.B);
                     }
 
                     //// Use this for stuff with Lobby
@@ -236,44 +221,25 @@ namespace GamePlugin
                     float newMX = reader.ReadSingle();
                     float newMY = reader.ReadSingle();
 
-                    // Get PlayerID
-                    string playerIDQuery = "SELECT PlayerID FROM Players WHERE ClientID = (@ClientID)";
-                    SQLiteCommand playerIDCommand = new SQLiteCommand(playerIDQuery, DB.myConnection);
-                    playerIDCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                    SQLiteDataReader playerIDResult = playerIDCommand.ExecuteReader();
-
-                    ushort playerID = 0;
-
-                    if (playerIDResult.HasRows)
-                    {
-                        while (playerIDResult.Read())
-                        {
-                            UInt16.TryParse(playerIDResult["PlayerID"].ToString(), out playerID);
-                        }
-                    }
+                    Player player = players[e.Client];
+                    player.X = newX;
+                    player.Y = newY;
+                    player.MX = newMX;
+                    player.MY = newMY;
 
                     // Send player's inputs to other clients
                     using (DarkRiftWriter writer = DarkRiftWriter.Create())
                     {
-                        writer.Write(playerID);
-                        writer.Write(newX);
-                        writer.Write(newY);
-                        writer.Write(newMX);
-                        writer.Write(newMY);
+                        writer.Write(e.Client.ID);
+                        writer.Write(player.X);
+                        writer.Write(player.Y);
+                        writer.Write(player.MX);
+                        writer.Write(player.MY);
                         message.Serialize(writer);
                     }
 
                     foreach (IClient c in ClientManager.GetAllClients().Where(x => x != e.Client))
                         c.SendMessage(message, SendMode.Reliable);
-
-                    string newPlayerQuery = "UPDATE Players SET PosX = (@PosX), PosY = (@PosY), MousePosX = (@MX), MousePosY = (@MY) WHERE ClientID = (@ClientID)";
-                    SQLiteCommand newPlayerCommand = new SQLiteCommand(newPlayerQuery, DB.myConnection);
-                    newPlayerCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                    newPlayerCommand.Parameters.AddWithValue("@PosX", newX);
-                    newPlayerCommand.Parameters.AddWithValue("@PosY", newY);
-                    newPlayerCommand.Parameters.AddWithValue("@MX", newMX);
-                    newPlayerCommand.Parameters.AddWithValue("@MY", newMY);
-                    int newPlayerResult = newPlayerCommand.ExecuteNonQuery();
                 }
             }
         }
@@ -423,6 +389,8 @@ namespace GamePlugin
             // If gather spots haven't been spawned/map hasn't been generated, generate it now and send it to all players
             if (!gatherSpotsSpawned)
             {
+                gameStarted = true;
+
                 using (DarkRiftWriter writer = DarkRiftWriter.Create())
                 {
                     Console.WriteLine("Spawning gather spots");
@@ -579,28 +547,12 @@ namespace GamePlugin
             // Inform other players of the disconnect if there are other players
             if (ClientManager.Count > 1)
             {
-                // Look for player with the disconnected client's ID and get their playerID
-                string playerIDQuery = "SELECT PlayerID FROM Players WHERE ClientID = (@ClientID)";
-                SQLiteCommand playerIDCommand = new SQLiteCommand(playerIDQuery, DB.myConnection);
-                playerIDCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-                SQLiteDataReader playerIDResult = playerIDCommand.ExecuteReader();
-
-                ushort playerID = 0;
-
-                if (playerIDResult.HasRows)
-                {
-                    while (playerIDResult.Read())
-                    {
-                        UInt16.TryParse(playerIDResult["PlayerID"].ToString(), out playerID);
-                    }
-                }
-
                 if (gameStarted)
                 {
                     // If game is ongoing, send the message with this tag
                     using (DarkRiftWriter writer = DarkRiftWriter.Create())
                     {
-                        writer.Write(playerID);
+                        writer.Write(e.Client.ID);
 
                         using (Message message = Message.Create(Tags.DespawnPlayerTag, writer))
                         {
@@ -615,7 +567,7 @@ namespace GamePlugin
                     // If we're still in lobby, send the message with another tag
                     using (DarkRiftWriter writer = DarkRiftWriter.Create())
                     {
-                        writer.Write(playerID);
+                        writer.Write(e.Client.ID);
 
                         using (Message message = Message.Create(Tags.DisconnectLobbyPlayerTag, writer))
                         {
@@ -626,35 +578,40 @@ namespace GamePlugin
                 }
             }
 
-            // Look for player with the disconnected client's ID and erase them from their DB
+            takenColors.Remove(players[e.Client].colorID);
+            players.Remove(e.Client);
+
+            // Look for player with the disconnected client's ID and erase them from the DB
             string deletePlayerQuery = "DELETE FROM Players WHERE ClientID = @ClientID";
             SQLiteCommand deletePlayerCommand = new SQLiteCommand(deletePlayerQuery, DB.myConnection);
             deletePlayerCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
             int deletePlayerResult = deletePlayerCommand.ExecuteNonQuery();
+        }
+    }
 
-            // Get the ID of the color that is about to be disconnected and remove it from takenColors
-            string colorIDQuery = "SELECT PlayerID FROM Players WHERE ClientID = (@ClientID)";
-            SQLiteCommand colorIDCommand = new SQLiteCommand(colorIDQuery, DB.myConnection);
-            colorIDCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-            SQLiteDataReader colorIDResult = colorIDCommand.ExecuteReader();
+    class Player
+    {
+        public ushort ClientID;
+        public float X;
+        public float Y;
+        public float MX;
+        public float MY;
+        public ushort colorID;
+        public byte R;
+        public byte G;
+        public byte B;
 
-            ushort colorID = 0;
-
-            if (colorIDResult.HasRows)
-            {
-                while (colorIDResult.Read())
-                {
-                    UInt16.TryParse(colorIDResult["PlayerID"].ToString(), out colorID);
-                }
-            }
-
-            takenColors.Remove(colorID);
-
-            // Release the color of the disconnected player
-            string freeColorQuery = "UPDATE Colors SET ClientID = null WHERE ClientID = @ClientID";
-            SQLiteCommand freeColorCommand = new SQLiteCommand(freeColorQuery, DB.myConnection);
-            freeColorCommand.Parameters.AddWithValue("@ClientID", e.Client.ID);
-            int freeColorWipeResult = freeColorCommand.ExecuteNonQuery();
+        public Player(ushort client, float X, float Y, float MX, float MY, ushort colorID, byte R, byte G, byte B)
+        {
+            ClientID = client;
+            this.X = X;
+            this.Y = Y;
+            this.MX = MX;
+            this.MY = MY;
+            this.colorID = colorID;
+            this.R = R;
+            this.G = G;
+            this.B = B;
         }
     }
 }
