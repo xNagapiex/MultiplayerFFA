@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using DarkRift.Client.Unity;
 using DarkRift.Client;
 using System;
@@ -34,6 +35,8 @@ public class PlayerSpawner : MonoBehaviour
 
     void Awake()
     {
+        DontDestroyOnLoad(gameObject);
+
         if (client == null)
         {
             Debug.LogError("Client unassigned in PlayerSpawner.");
@@ -52,7 +55,10 @@ public class PlayerSpawner : MonoBehaviour
             Application.Quit();
         }
 
-        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+        if (GameObject.Find("LobbyManager"))
+        {
+            lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+        }
 
         // Upon receiving a message from server, do as instructed in the void SpawnPlayer
         client.MessageReceived += MessageReceived;
@@ -69,7 +75,11 @@ public class PlayerSpawner : MonoBehaviour
             else if (message.Tag == Tags.PlayerJoinedTag){
                 PlayerJoined(sender, e);
             }
-            else if (message.Tag == Tags.DisconnectLobbyPlayerTag)
+            else if (message.Tag == Tags.StartGameTag)
+            {
+                SceneManager.LoadScene("NetworkTest");
+            }
+            else if (message.Tag == Tags.DisconnectLobbyPlayerTag && lobbyManager != null)
             {
                 DisconnectLobbyPlayer(sender, e);
             }
@@ -94,7 +104,10 @@ public class PlayerSpawner : MonoBehaviour
                         255
                         );
 
-                    lobbyManager.NewPlayerJoined(color, clientID);
+                    if (lobbyManager != null)
+                    {
+                        lobbyManager.NewPlayerJoined(color, clientID);
+                    }
                 }
                 
             }
@@ -198,15 +211,21 @@ public class PlayerSpawner : MonoBehaviour
         {
             using (DarkRiftReader reader = message.GetReader())
             {
-                if (!gameStarted)
-                {
-                    lobbyManager.UpdateLobbyPlayer(reader.ReadUInt16());
-                }
-                else
-                {
-                    networkPlayerManager.DestroyPlayer(reader.ReadUInt16());
-                }
+                networkPlayerManager.DestroyPlayer(reader.ReadUInt16());
             }
+        }
+    }
+
+    public void StartGame()
+    {
+        // Sending the server a message to start the game
+        using (DarkRiftWriter writer = DarkRiftWriter.Create())
+        {
+            bool gamestarted = true;
+            writer.Write(gamestarted);
+
+            using (Message message = Message.Create(Tags.MovePlayerTag, writer))
+                client.SendMessage(message, SendMode.Unreliable);
         }
     }
 }

@@ -161,7 +161,9 @@ public class LobbyManager : MonoBehaviour
                     }
                 }
 
-                players.Clear();
+                players.Remove(cID1);
+                players.Remove(cID2);
+                players.Remove(cID3);
                 players.Add(cID1, count1);
                 players.Add(cID2, count2);
                 players.Add(cID3, count3);

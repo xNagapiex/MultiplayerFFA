@@ -5,8 +5,12 @@ using UnityEngine.SceneManagement;
 
 public class Menu : MonoBehaviour {
 
+    GameObject network;
+
 	// Use this for initialization
 	void Start () {
+
+        network = GameObject.Find("Network");
 		
 	}
 	
@@ -36,7 +40,9 @@ public class Menu : MonoBehaviour {
     // Starts game
     public void StartGame()
     {
-        SceneManager.LoadScene("NetworkTest");
-        //GameObject.Find("Network").GetComponent<PlayerSpawner>().StartGame();
+        if (network != null)
+        {
+            network.GetComponent<PlayerSpawner>().StartGame();
+        }
     }
 }

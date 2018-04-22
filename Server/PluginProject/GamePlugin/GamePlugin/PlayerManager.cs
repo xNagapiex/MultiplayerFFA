@@ -208,6 +208,12 @@ namespace GamePlugin
 
         void StartGame(object sender, MessageReceivedEventArgs e)
         {
+            using (Message message = e.GetMessage() as Message)
+            {
+                foreach (IClient c in ClientManager.GetAllClients())
+                    c.SendMessage(message, SendMode.Reliable);
+            }
+
             // Spawn gather spots first so that we won't have players floating around in an empty area before they can even play
             SpawnGatherSpots();
 
